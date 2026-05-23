@@ -367,69 +367,44 @@ h1 {
 .legend-recurring { color: #c89cff; }
 
 /* ============================================
-   TUTOR VISUAL IDENTIFICATION (A + C + D)
-   - A: halo glow + frame tint + big letter badge
-   - C: subtle hue-shift on sprite
-   - D: trail particles when moving
+   TUTOR VISUAL IDENTIFICATION
+   - Isi: tinte naranja cálido (halo, frame tint, sprite hue, trail)
+   - Gayle: los Throngs originales sin tinte (yellow puro KJP)
    ============================================ */
 
-/* A · Halo glow detrás del Throng según tutor */
-.mini-throng::before {
+/* Halo coloreado SOLO para los Throngs de Isi (Gayle queda limpia) */
+.mini-throng[data-tutor="isi"]::before {
   content: '';
   position: absolute;
   inset: -16px;
   border-radius: 50%;
   background: radial-gradient(
     circle at center,
-    var(--tutor-color, #00d4ff) 0%,
+    #ff9933 0%,
     transparent 60%
   );
-  opacity: 0.35;
+  opacity: 0.4;
   z-index: -1;
   pointer-events: none;
   filter: blur(4px);
 }
-.mini-throng[data-tutor="isi"]   { --tutor-color: #00d4ff; }
-.mini-throng[data-tutor="gayle"] { --tutor-color: #ff9933; }
+.mini-throng[data-tutor="isi"]   { --tutor-color: #ff9933; }
+.mini-throng[data-tutor="gayle"] { --tutor-color: #fff66d; }
 
-/* A · Frame tint según tutor (sustituye el gris #6e6e6e neutro) */
-.mini-throng[data-tutor="isi"]   .mini-frame { background: #485866; }
-.mini-throng[data-tutor="gayle"] .mini-frame { background: #685544; }
+/* Frame tint: Isi cálido, Gayle queda neutro (gris original) */
+.mini-throng[data-tutor="isi"] .mini-frame { background: #685544; }
+/* Gayle hereda el gris neutro #6e6e6e por defecto, no se sobreescribe */
 
-/* A · Big letter badge en esquina superior izquierda del frame */
-.tutor-badge {
-  position: absolute;
-  top: -8px;
-  left: -8px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 11px;
-  font-weight: bold;
-  border: 2px solid #0a0014;
-  box-shadow: 0 0 8px currentColor, 0 2px 4px rgba(0,0,0,0.6);
-  z-index: 4;
-  pointer-events: none;
-  letter-spacing: 0;
-}
-.tutor-badge.isi   { background: #00d4ff; color: #0a0014; }
-.tutor-badge.gayle { background: #ff9933; color: #0a0014; }
-
-/* C · Hue-shift sutil del sprite según tutor */
+/* Hue-shift del sprite: Isi cálido/naranja, Gayle sin filtro (sprite original yellow KJP) */
 .mini-throng[data-tutor="isi"] .sprite {
-  filter: hue-rotate(50deg) saturate(0.9) brightness(0.95) contrast(1.05);
-}
-.mini-throng[data-tutor="gayle"] .sprite {
   filter: hue-rotate(-25deg) saturate(1.2) brightness(1.05);
 }
-/* Sick override: si está enfermo, sin hue-shift en el sprite (ya tiene el filtro red) */
+/* Gayle: ningún filter — sprite original */
+
+/* Sick override: si está enfermo, sin hue-shift en el sprite */
 .mini-throng.sick .sprite { filter: none; }
 
-/* D · Trail particles — estela al moverse */
+/* Trail particles — solo para Isi (estela naranja al moverse) */
 .trail-particle {
   position: absolute;
   width: 5px;
@@ -441,13 +416,11 @@ h1 {
   animation: trailFade 0.7s ease-out forwards;
 }
 .trail-particle.isi {
-  background: #00d4ff;
-  box-shadow: 0 0 6px #00d4ff, 0 0 12px rgba(0,212,255,0.6);
-}
-.trail-particle.gayle {
   background: #ff9933;
   box-shadow: 0 0 6px #ff9933, 0 0 12px rgba(255,153,51,0.6);
 }
+/* Gayle no deja estela — sus Throngs se mueven "limpios" */
+.trail-particle.gayle { display: none; }
 @keyframes trailFade {
   0%   { opacity: 0.85; transform: translate(-50%, -50%) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }

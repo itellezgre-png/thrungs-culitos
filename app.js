@@ -1239,8 +1239,10 @@ const COLLISION_COOLDOWN_MS = 1500;
 
 function spawnTrailParticle(throng) {
   if (!worldStageEl) return;
+  // Solo los Throngs de Isi dejan estela (Gayle = originales limpios)
+  if (throng.expense.tutor !== 'Isi') return;
   const p = document.createElement('div');
-  p.className = 'trail-particle ' + (throng.expense.tutor === 'Isi' ? 'isi' : 'gayle');
+  p.className = 'trail-particle isi';
   p.style.left = (throng.x + throng.size / 2) + 'px';
   p.style.top = (throng.y + throng.size / 2 + throng.size * 0.3) + 'px';
   worldStageEl.appendChild(p);
@@ -1282,7 +1284,6 @@ function renderWorld() {
     el.dataset.tutor = e.tutor.toLowerCase();
     el.innerHTML = `
       <div class="mini-tag">${e.name.substring(0,18)}</div>
-      <div class="tutor-badge ${e.tutor.toLowerCase()}">${e.tutor === 'Isi' ? 'I' : 'G'}</div>
       <div class="mini-frame">
         <img class="sprite" src="${SPRITES.A_think}" alt="">
       </div>
