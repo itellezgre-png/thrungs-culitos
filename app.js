@@ -1233,12 +1233,23 @@ let worldThrongs = [];
 let worldRaf = null;
 let worldStageEl = null;
 let lastCollisionCheck = 0;
+let trailFrameCounter = 0;
 const COLLISION_THROTTLE_MS = 50;
 const COLLISION_COOLDOWN_MS = 1500;
 
+function spawnTrailParticle(throng) {
+  if (!worldStageEl) return;
+  const p = document.createElement('div');
+  p.className = 'trail-particle ' + (throng.expense.tutor === 'Isi' ? 'isi' : 'gayle');
+  p.style.left = (throng.x + throng.size / 2) + 'px';
+  p.style.top = (throng.y + throng.size / 2 + throng.size * 0.3) + 'px';
+  worldStageEl.appendChild(p);
+  setTimeout(() => p.remove(), 700);
+}
+
 function renderWorld() {
   worldStageEl = document.getElementById('worldStage');
-  worldStageEl.querySelectorAll('.mini-throng, .mini-bubble, .music-note').forEach(el => el.remove());
+  worldStageEl.querySelectorAll('.mini-throng, .mini-bubble, .music-note, .trail-particle').forEach(el => el.remove());
   worldThrongs = [];
 
   document.getElementById('worldMonthLabel').textContent = monthLabel(worldMonthKey);
@@ -1268,8 +1279,10 @@ function renderWorld() {
     el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
     el.style.setProperty('--tutor-color', tutorColor);
     el.dataset.expenseId = e.id;
+    el.dataset.tutor = e.tutor.toLowerCase();
     el.innerHTML = `
-      <div class="mini-tag">${e.tutor === 'Isi' ? 'I' : 'G'} · ${e.name.substring(0,18)}</div>
+      <div class="mini-tag">${e.name.substring(0,18)}</div>
+      <div class="tutor-badge ${e.tutor.toLowerCase()}">${e.tutor === 'Isi' ? 'I' : 'G'}</div>
       <div class="mini-frame">
         <img class="sprite" src="${SPRITES.A_think}" alt="">
       </div>
@@ -1341,6 +1354,16 @@ function tickWorld() {
   if (now - lastCollisionCheck > COLLISION_THROTTLE_MS) {
     lastCollisionCheck = now;
     detectCollisions(now);
+  }
+
+  // Trail particles ~8 veces/s, solo si el throng se mueve
+  trailFrameCounter++;
+  if (trailFrameCounter % 7 === 0) {
+    for (const t of worldThrongs) {
+      if (t.el.classList.contains('leaving')) continue;
+      const sp = Math.hypot(t.vx, t.vy);
+      if (sp > 0.35) spawnTrailParticle(t);
+    }
   }
 }
 function detectCollisions(now) {
