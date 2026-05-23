@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ff6ec7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Thrungs">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="sprites/A_happy.gif">
+<title>THRONG-WALLET // Monedero Thronglets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ===== BOOT SCREEN ===== -->
+<div class="boot" id="boot">
+  <div class="boot-line" style="animation-delay:0.0s" data-i18n="boot.line.industries">THRONGNET INDUSTRIES (c) 1994-26</div>
+  <div class="boot-line" style="animation-delay:0.4s">&nbsp;</div>
+  <div class="boot-line" style="animation-delay:0.5s" data-i18n="boot.line.init">> initializing colony...........[OK]</div>
+  <div class="boot-line" style="animation-delay:0.9s" data-i18n="boot.line.wallets">> binding wallets to tutors.....[OK]</div>
+  <div class="boot-line" style="animation-delay:1.3s" data-i18n="boot.line.lang">> loading throng-tongue.........[OK]</div>
+  <div class="boot-line" style="animation-delay:1.7s" data-i18n="boot.line.crt">> calibrating CRT phosphor......[OK]</div>
+  <div class="boot-line" style="animation-delay:2.1s" data-i18n="boot.line.awaken">> awakening thronglets..........</div>
+  <div class="boot-line" style="animation-delay:2.6s" data-i18n="boot.line.we_are">&nbsp;&nbsp;&nbsp;krii-mok! plong-plong! we are throng.</div>
+  <div class="boot-line" style="animation-delay:3.2s">&nbsp;</div>
+  <div class="boot-line" style="animation-delay:3.3s" data-i18n="boot.line.ready">> system ready.</div>
+  <div class="hint" style="animation-delay:3.6s" data-i18n="boot.hint">[ toca cualquier sitio para entrar ]</div>
+</div>
+
+<div class="crt">
+  <div class="stage">
+
+    <header>
+      <h1>THRONG-WALLET</h1>
+      <nav class="tabs">
+        <button class="tab active" data-view="colony" data-i18n="tab.colony">COLONIA</button>
+        <button class="tab" data-view="world" data-i18n="tab.world">MUNDO</button>
+        <button class="tab" data-view="stats" data-i18n="tab.stats">STATS</button>
+        <button class="tab" data-view="settings" data-i18n="tab.settings">AJUSTES</button>
+      </nav>
+    </header>
+
+    <!-- ============ COLONY ============ -->
+    <section id="colony-view" class="view active">
+
+      <div class="hud">
+        <div class="pill"><span data-i18n="hud.cycle">CICLO</span>: <span id="month">—</span></div>
+        <div class="pill total" id="totalPill"><span data-i18n="hud.spent">GASTADO</span>: <span id="total">0,00</span> €</div>
+        <div class="pill"><span data-i18n="hud.born">NACIDOS</span>: <span id="bornCount">0</span></div>
+        <div class="pill save-indicator" id="saveIndicator">💾 <span id="saveLabel">—</span></div>
+        <div class="pill cloud-pill cloud-offline" id="cloudPill" data-i18n="cloud.local">☁️ LOCAL</div>
+      </div>
+
+      <!-- Papa cards are rendered dynamically by app.js -->
+      <div class="colony" id="colony"></div>
+
+      <div class="deudas-panel">
+        <div class="tutor-card isi">
+          <div class="tutor-name">ISI</div>
+          <div class="tutor-amount"><span id="isiTotal">0,00</span> €</div>
+        </div>
+        <div class="balance-card">
+          <div class="balance-label"><span data-i18n="deudas.balance">BALANCE</span> · <span id="balanceMode">50/50</span></div>
+          <div class="balance-msg" id="balanceMsg">⚖ EN EQUILIBRIO</div>
+          <button class="settle-btn" id="settleBtn" data-i18n="deudas.settle">💸 LIQUIDAR</button>
+        </div>
+        <div class="tutor-card gayle">
+          <div class="tutor-name">GAYLE</div>
+          <div class="tutor-amount"><span id="gayleTotal">0,00</span> €</div>
+        </div>
+      </div>
+
+      <div class="feed-panel" id="feedPanel">
+        <div class="feed-row">
+          <span class="feed-label" data-i18n="feed.papa">PAPA</span>
+          <div class="papa-selector" id="papaSelector"></div>
+          <span class="feed-label" data-i18n="feed.tutor">TUTOR</span>
+          <div class="tutor-selector">
+            <button class="tutor-btn active" data-tutor="Isi" type="button">ISI</button>
+            <button class="tutor-btn" data-tutor="Gayle" type="button">GAYLE</button>
+          </div>
+        </div>
+        <div class="feed-row">
+          <input type="text" id="concepto" data-i18n-placeholder="feed.concept_placeholder" maxlength="40" autocomplete="off" list="conceptHints">
+          <datalist id="conceptHints"></datalist>
+          <span class="feed-label" data-i18n="feed.amount">€</span>
+          <input type="number" id="amount" placeholder="0,00" min="0.01" step="0.01" inputmode="decimal">
+          <span class="feed-label" data-i18n="feed.date">FECHA</span>
+          <input type="date" id="expenseDate">
+          <span class="feed-label" data-i18n="feed.split">REPARTO</span>
+          <select id="splitSelect">
+            <option value="50/50" data-i18n="feed.split.5050">50 / 50</option>
+            <option value="100isi" data-i18n="feed.split.100isi">100% ISI</option>
+            <option value="100gayle" data-i18n="feed.split.100gayle">100% GAYLE</option>
+          </select>
+          <button id="feedBtn" data-i18n="feed.feed">ALIMENTAR</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ WORLD ============ -->
+    <section id="world-view" class="view">
+      <div class="month-nav">
+        <button id="prevMonth">◀</button>
+        <span class="world-title"><span data-i18n="world.title_prefix">MUNDO · </span><span id="worldMonthLabel">—</span></span>
+        <button id="nextMonth">▶</button>
+        <button id="todayBtn" data-i18n="world.today">HOY</button>
+        <button id="historyBtn" data-i18n="world.history">📜</button>
+      </div>
+      <div class="world-stage" id="worldStage">
+        <div class="world-empty" id="worldEmpty">
+          <div data-i18n="world.empty">esta luna aún no ha visto Thronglets</div>
+          <div class="hint-small" data-i18n="world.empty_hint">ve a la COLONIA y aliméntalos</div>
+        </div>
+
+        <div class="history-panel" id="historyPanel">
+          <div class="history-header">
+            <span><span data-i18n="history.title_prefix">HISTÓRICO · </span><span id="historyMonth">—</span></span>
+            <button id="historyClose">×</button>
+          </div>
+          <div class="history-totals" id="historyTotals"></div>
+          <input type="search" id="historySearch" class="history-search" data-i18n-placeholder="history.search_placeholder" placeholder="buscar concepto...">
+          <div class="history-filters" id="historyFilters"></div>
+          <div class="history-list" id="historyList"></div>
+        </div>
+      </div>
+      <div class="world-legend">
+        <div><span class="tutor-dot isi"></span> ISI</div>
+        <div><span class="tutor-dot gayle"></span> GAYLE</div>
+        <div class="legend-recurring" data-i18n="world.legend_recurring">♺ SUSCRI = recurrente</div>
+        <div class="legend-tip" data-i18n="world.legend_tip">clica para oír · cuando chocan cantan</div>
+      </div>
+    </section>
+
+    <!-- ============ STATS ============ -->
+    <section id="stats-view" class="view">
+      <div class="stats-content">
+        <h2 class="settings-title" data-i18n="stats.title">ANÁLISIS THRONG</h2>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label" data-i18n="stats.accumulated">ACUMULADO</div>
+            <div class="stat-value" id="statTotal">0,00 €</div>
+            <div class="stat-sub" data-i18n="stats.since_dawn">desde el inicio de los tiempos</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label" data-i18n="stats.monthly_avg">MEDIA MENSUAL</div>
+            <div class="stat-value" id="statAvg">0,00 €</div>
+            <div class="stat-sub" id="statAvgRange" data-i18n="stats.period">— período —</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label" data-i18n="stats.max_month">MES MÁS CARO</div>
+            <div class="stat-value" id="statMaxMonth">—</div>
+            <div class="stat-sub" id="statMaxMonthVal">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label" data-i18n="stats.living_throngs">THRONGS VIVOS</div>
+            <div class="stat-value" id="statThrongs">0</div>
+            <div class="stat-sub" id="statRecurring">0 recurrentes</div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="stats.spend_per_month">GASTO POR MES (últimos 12)</h3>
+          <div class="chart-row" id="monthlyChart"></div>
+        </div>
+
+        <div class="stats-two-cols">
+          <div class="settings-group">
+            <h3 data-i18n="stats.by_papa">REPARTO POR PAPA</h3>
+            <div id="papaBreakdown"></div>
+          </div>
+          <div class="settings-group">
+            <h3 data-i18n="stats.by_tutor">REPARTO POR TUTOR</h3>
+            <div id="tutorBreakdown"></div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="stats.top5">TOP 5 GASTOS MÁS CAROS</h3>
+          <div id="topExpenses"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SETTINGS ============ -->
+    <section id="settings-view" class="view">
+      <div class="settings-content">
+        <h2 class="settings-title" data-i18n="settings.title">AJUSTES THRONG</h2>
+
+        <!-- LANGUAGE -->
+        <div class="settings-group">
+          <h3 data-i18n="settings.language">IDIOMA</h3>
+          <p class="hint-text" data-i18n="settings.language_hint">Cambia el idioma de la interfaz.</p>
+          <div class="lang-selector">
+            <button class="lang-btn" data-lang="es">🇪🇸 Español</button>
+            <button class="lang-btn" data-lang="en">🇬🇧 English</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="settings.papas">PAPA-THRONGS</h3>
+          <p class="hint-text" data-i18n="settings.papas_hint">Renombra, edita presupuesto y sprite. Crea nuevos Papas (máx 6). Si un Papa pasa su límite, los hijos que nazcan vendrán enfermos.</p>
+          <div id="papasList"></div>
+          <button class="add-papa-btn" id="addPapaBtn" data-i18n="settings.add_papa">+ AÑADIR PAPA</button>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="settings.debt_model">MODELO DE DEUDA</h3>
+          <p class="hint-text" data-i18n="settings.debt_hint">Por defecto, cada gasto se reparte como tú elijas (50/50, solo Isi, solo Gayle) — esto se calcula globalmente con el modelo que escojas aquí:</p>
+          <label class="radio-row">
+            <input type="radio" name="splitModel" value="half">
+            <span><b data-i18n="settings.split_half_title">Reparto 50/50</b> <span data-i18n="settings.split_half_desc">— la mitad de la diferencia.</span><br><span class="dim" data-i18n="settings.split_half_ex">Ejemplo: Isi 500 / Gayle 300 → Gayle debe 100.</span></span>
+          </label>
+          <label class="radio-row">
+            <input type="radio" name="splitModel" value="difference">
+            <span><b data-i18n="settings.split_diff_title">Diferencia bruta</b> <span data-i18n="settings.split_diff_desc">— lo aportado de más.</span><br><span class="dim" data-i18n="settings.split_diff_ex">Ejemplo: Isi 500 / Gayle 300 → Gayle debe 200.</span></span>
+          </label>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="settings.volume">VOLUMEN THRONG</h3>
+          <p class="hint-text" data-i18n="settings.volume_hint">Cuánto chillan los Thronglets de fondo.</p>
+          <div class="setting-row"><span class="setting-label" data-i18n="settings.master_vol">VOL. MAESTRO</span><input type="range" id="masterVolume" min="0" max="100" value="60"><span class="setting-suffix"><span id="volLabel">60</span>%</span></div>
+          <div class="setting-row"><span class="setting-label" data-i18n="settings.world_chatter">MUNDO</span>
+            <select id="worldChatter">
+              <option value="quiet" data-i18n="chatter.quiet">Tranquilo</option>
+              <option value="normal" data-i18n="chatter.normal">Normal</option>
+              <option value="party" data-i18n="chatter.party">Fiesta Throng</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="settings.cloud">☁️ SINCRONIZACIÓN NUBE</h3>
+          <p class="hint-text" data-i18n="settings.cloud_hint">Cuando se conecta, los gastos y cambios se ven en vivo en cualquier dispositivo conectado al mismo hogar. Sigue funcionando offline; al volver online sincroniza.</p>
+          <div class="cloud-status-row">
+            <span class="cloud-status-label" data-i18n="settings.status">Estado:</span>
+            <span class="cloud-status-value" id="cloudStatus" data-i18n="cloud.status.disconnected">○ Desconectado (solo local)</span>
+          </div>
+
+          <div class="cloud-form" id="cloudForm">
+            <div class="setting-row"><span class="setting-label" data-i18n="cloud.url">URL</span>
+              <input type="text" id="cloudUrl" placeholder="https://xxx.supabase.co" autocomplete="off">
+            </div>
+            <div class="setting-row"><span class="setting-label" data-i18n="cloud.anon_key">ANON KEY</span>
+              <input type="password" id="cloudKey" placeholder="eyJ..." autocomplete="off">
+            </div>
+            <div class="setting-row"><span class="setting-label" data-i18n="cloud.household_id">HOUSEHOLD ID</span>
+              <span class="cloud-household" id="cloudHousehold">—</span>
+            </div>
+            <div class="backup-row">
+              <button class="backup-btn import" id="connectBtn" data-i18n="cloud.connect">🔌 CONECTAR</button>
+              <button class="backup-btn export" id="inviteBtn" disabled data-i18n="cloud.invite">📋 COPIAR URL INVITACIÓN</button>
+              <button class="backup-btn" id="disconnectBtn" disabled data-i18n="cloud.disconnect">DESCONECTAR</button>
+            </div>
+          </div>
+
+          <p class="hint-text" style="margin-top:14px" data-i18n="cloud.guide" data-i18n-html>📖 Guía paso a paso: abre <b>CLOUD_SETUP.md</b> en la carpeta del proyecto.</p>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="settings.backup">📦 COPIA DE SEGURIDAD LOCAL</h3>
+          <p class="hint-text" data-i18n="settings.backup_hint">Aunque tengas la nube activa, exporta de vez en cuando un JSON por si acaso.</p>
+          <div class="backup-row">
+            <button class="backup-btn export" id="exportBtn" data-i18n="settings.export">⬇ EXPORTAR JSON</button>
+            <button class="backup-btn import" id="importBtn" data-i18n="settings.import">⬆ IMPORTAR JSON</button>
+            <input type="file" id="importFile" accept=".json" hidden>
+          </div>
+          <div class="backup-info" id="backupInfo">—</div>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="settings.install">📲 INSTALAR COMO APP</h3>
+          <p class="hint-text" data-i18n="settings.install_hint">En Chrome/Edge móvil: menú · "Añadir a pantalla de inicio". En Safari iOS: compartir · "Añadir a inicio". En PC: icono de instalación en la barra de direcciones. Funciona offline.</p>
+          <div class="backup-info" id="pwaStatus">—</div>
+          <button class="backup-btn" id="forceRefreshBtn" data-i18n="settings.force_refresh">🔄 FORZAR ACTUALIZACIÓN</button>
+          <p class="hint-text" data-i18n="settings.force_refresh_hint">Si la app no carga los últimos cambios después de actualizar, pulsa esto: limpia caché y service worker, luego recarga.</p>
+        </div>
+
+        <div class="settings-group danger">
+          <h3 data-i18n="settings.sacrifice_zone">ZONA SACRIFICIO</h3>
+          <p class="hint-text" data-i18n="settings.sacrifice_hint">Aquí mueren los Thronglets. No se puede deshacer.</p>
+          <button class="danger-btn" id="resetMonthBtn" data-i18n="settings.sacrifice_month">SACRIFICAR ESTE MES</button>
+          <button class="danger-btn" id="wipeAllBtn" data-i18n="settings.sacrifice_all">SACRIFICAR TODA LA COLONIA</button>
+        </div>
+
+        <div class="settings-actions">
+          <button class="save-btn" id="saveSettings" data-i18n="settings.save_btn">💾 GUARDAR AJUSTES</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ===== SPEECH BUBBLE ===== -->
+<div class="speech" id="speech">
+  <div class="throng-line" id="speechT">KRII-MOK!</div>
+  <div class="translation" id="speechE">¡Aliméntame, tutor!</div>
+  <div class="speech-meta" id="speechMeta"></div>
+  <div class="speech-actions" id="speechActions" hidden>
+    <button class="speech-btn" id="returnBtn" data-i18n="speech.return_to_papa">↩ DEVOLVER AL PAPA</button>
+  </div>
+</div>
+
+<!-- ===== EDIT EXPENSE MODAL ===== -->
+<div class="modal-backdrop" id="editModal" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <span data-i18n="modal.edit_title">EDITAR THRONGLET</span>
+      <button class="modal-close" id="editClose">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="modal-label" data-i18n="modal.description">Concepto</label>
+      <input type="text" id="editConcepto" maxlength="40">
+      <label class="modal-label" data-i18n="modal.amount">Importe (€)</label>
+      <input type="number" id="editAmount" min="0.01" step="0.01" inputmode="decimal">
+      <label class="modal-label" data-i18n="modal.date">Fecha</label>
+      <input type="date" id="editDate">
+      <label class="modal-label" data-i18n="modal.papa">Papa</label>
+      <div class="papa-selector" id="editPapaSelector"></div>
+      <label class="modal-label" data-i18n="modal.paying_tutor">Tutor pagador</label>
+      <div class="tutor-selector" id="editTutorSelector">
+        <button class="tutor-btn" data-edit-tutor="Isi">ISI</button>
+        <button class="tutor-btn" data-edit-tutor="Gayle">GAYLE</button>
+      </div>
+      <label class="modal-label" data-i18n="modal.split">Reparto</label>
+      <select id="editSplit">
+        <option value="50/50" data-i18n="feed.split.5050">50 / 50</option>
+        <option value="100isi" data-i18n="feed.split.100isi">100% ISI</option>
+        <option value="100gayle" data-i18n="feed.split.100gayle">100% GAYLE</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" id="editCancel" data-i18n="modal.cancel">CANCELAR</button>
+      <button class="modal-btn save" id="editSave" data-i18n="modal.save">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PAPA EDIT MODAL ===== -->
+<div class="modal-backdrop" id="papaModal" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <span id="papaModalTitle" data-i18n="modal.papa_title">PAPA THRONG</span>
+      <button class="modal-close" id="papaClose">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="modal-label" data-i18n="modal.name">Nombre</label>
+      <input type="text" id="papaName" maxlength="20">
+      <label class="modal-label" data-i18n="modal.budget">Presupuesto mensual (€)</label>
+      <input type="number" id="papaBudget" min="0" step="10" inputmode="numeric">
+      <label class="modal-label" data-i18n="modal.color">Color / raza</label>
+      <div class="color-slot-picker" id="papaColorPicker"></div>
+      <label class="modal-label" data-i18n="modal.sprite">Sprite</label>
+      <div class="sprite-picker" id="papaSpritePicker"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn danger" id="papaDelete" hidden data-i18n="modal.delete">BORRAR</button>
+      <button class="modal-btn cancel" id="papaCancel" data-i18n="modal.cancel">CANCELAR</button>
+      <button class="modal-btn save" id="papaSave" data-i18n="modal.save">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== INSTALL PROMPT MODAL ===== -->
+<div class="modal-backdrop install-modal-backdrop" id="installPrompt" hidden>
+  <div class="modal install-modal">
+    <div class="modal-header">
+      <span data-i18n="install.title">📲 INSTALA THRONG-WALLET</span>
+    </div>
+    <div class="modal-body">
+      <p class="install-intro" data-i18n="install.intro">Para la mejor experiencia, instala la app en tu dispositivo. Es gratis y solo tarda 5 segundos.</p>
+      <div class="install-benefits">
+        <div data-i18n="install.benefit_1">✓ Icono propio en pantalla de inicio</div>
+        <div data-i18n="install.benefit_2">✓ Sin barra de navegador</div>
+        <div data-i18n="install.benefit_3">✓ Funciona sin internet</div>
+        <div data-i18n="install.benefit_4">✓ Carga más rápido</div>
+      </div>
+      <div id="installInstructions" class="install-instructions"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" id="installLater" data-i18n="install.later">MÁS TARDE</button>
+      <button class="modal-btn save" id="installNow" data-i18n="install.now">INSTALAR AHORA</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SETTLEMENT MODAL ===== -->
+<div class="modal-backdrop" id="settleModal" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <span data-i18n="modal.settle_title">💸 LIQUIDAR DEUDA</span>
+      <button class="modal-close" id="settleClose">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint-text" data-i18n="modal.settle_hint">Registra que uno le ha pagado al otro (Bizum, efectivo, etc.). Reduce el balance directamente, no es un gasto.</p>
+      <label class="modal-label" data-i18n="modal.direction">Dirección</label>
+      <div class="tutor-selector" id="settleDir">
+        <button class="tutor-btn active" data-settle="gayle-to-isi" data-i18n="modal.gayle_to_isi">GAYLE → ISI</button>
+        <button class="tutor-btn" data-settle="isi-to-gayle" data-i18n="modal.isi_to_gayle">ISI → GAYLE</button>
+      </div>
+      <label class="modal-label" data-i18n="modal.amount">Importe (€)</label>
+      <input type="number" id="settleAmount" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00">
+      <label class="modal-label" data-i18n="modal.date">Fecha</label>
+      <input type="date" id="settleDate">
+      <label class="modal-label" data-i18n="modal.note_optional">Nota (opcional)</label>
+      <input type="text" id="settleNote" maxlength="40" data-i18n-placeholder="modal.note_placeholder" placeholder="Bizum, efectivo, ...">
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" id="settleCancel" data-i18n="modal.cancel">CANCELAR</button>
+      <button class="modal-btn save" id="settleSave" data-i18n="modal.register">REGISTRAR</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').then(reg => {
+        const el = document.getElementById('pwaStatus');
+        if (el && window.__t) el.textContent = window.__t('pwa.sw_active');
+        else if (el) el.textContent = 'Service Worker active · works offline ✓';
+      }).catch(err => {
+        const el = document.getElementById('pwaStatus');
+        if (el && window.__t) el.textContent = window.__t('pwa.sw_failed', { msg: err.message });
+        else if (el) el.textContent = 'SW not registered: ' + err.message;
+      });
+    });
+  }
+</script>
+</body>
+</html>

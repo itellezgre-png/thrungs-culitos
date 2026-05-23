@@ -1,0 +1,17 @@
+{
+  "name": "Thrungs Money — Monedero Thronglet",
+  "short_name": "Thrungs",
+  "description": "Monedero compartido inspirado en Plaything (Black Mirror). Cada gasto se convierte en un Thronglet vivo.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0014",
+  "theme_color": "#ff6ec7",
+  "lang": "es",
+  "icons": [
+    { "src": "sprites/A_happy.gif",  "sizes": "440x440", "type": "image/gif", "purpose": "any" },
+    { "src": "sprites/A_think.gif",  "sizes": "440x440", "type": "image/gif", "purpose": "any" }
+  ],
+  "categories": ["finance", "lifestyle"]
+}
