@@ -839,6 +839,150 @@ h1 {
 .modal-btn.danger { color: #ff5577; border-color: #ff5577; background: transparent; margin-right: auto; }
 .modal-btn.danger:hover { background: #ff5577; color: #0a0014; }
 
+/* ============================================
+   PAPA CARDS POLISH (cinema feel)
+   ============================================ */
+.throng {
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.throng:active .papa-frame {
+  transform: scale(0.94);
+}
+.throng .papa-frame {
+  transition: transform 0.18s, box-shadow 0.25s;
+}
+/* Subtle continuous glow pulse on Papa frames (very subtle, ambient) */
+.throng .papa-frame {
+  animation: papaBreath 4s ease-in-out infinite;
+}
+@keyframes papaBreath {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.08); }
+}
+/* Stagger animations across Papas so they don't pulse in sync */
+.colony .throng:nth-child(1) .papa-frame { animation-delay: 0s; }
+.colony .throng:nth-child(2) .papa-frame { animation-delay: 1.3s; }
+.colony .throng:nth-child(3) .papa-frame { animation-delay: 2.6s; }
+.colony .throng:nth-child(4) .papa-frame { animation-delay: 0.7s; }
+.colony .throng:nth-child(5) .papa-frame { animation-delay: 2s; }
+.colony .throng:nth-child(6) .papa-frame { animation-delay: 3.3s; }
+
+/* ============================================
+   PAPA PROGRESS BAR (under each Papa frame)
+   ============================================ */
+.papa-progress {
+  width: 80%;
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  margin: 10px auto 0;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.papa-progress-fill {
+  height: 100%;
+  background: linear-gradient(to right, #7df9aa, #c5f97a);
+  transition: width 0.5s ease-out, background 0.3s;
+  box-shadow: 0 0 6px rgba(125,249,170,0.5);
+}
+.papa-progress-fill.warn {
+  background: linear-gradient(to right, #fff66d, #ff9933);
+  box-shadow: 0 0 8px rgba(255,153,51,0.6);
+}
+.papa-progress-fill.over {
+  background: #ff5577;
+  box-shadow: 0 0 12px rgba(255,85,119,0.8);
+  animation: barOverPulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes barOverPulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.4); }
+}
+
+/* Children-badge color states (matching progress) */
+.children-badge.badge-warn {
+  color: #fff66d;
+  border-color: #fff66d;
+  box-shadow: 0 0 8px rgba(255,246,109,0.5);
+}
+.children-badge.badge-over {
+  color: #ff5577;
+  border-color: #ff5577;
+  box-shadow: 0 0 10px rgba(255,85,119,0.7);
+}
+
+/* ============================================
+   QUICK-ADD CHIPS
+   ============================================ */
+.quick-chips {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  margin-top: auto;
+}
+.quick-chips:empty { display: none; }
+.quick-chips::-webkit-scrollbar { display: none; }
+.quick-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(200,156,255,0.08);
+  color: #c89cff;
+  border: 1px solid currentColor;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  padding: 6px 12px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: transform 0.1s, background 0.15s;
+  border-radius: 2px;
+}
+.quick-chip.t-rosa  { color: #ff6ec7; background: rgba(255,110,199,0.08); }
+.quick-chip.t-menta { color: #7df9aa; background: rgba(125,249,170,0.08); }
+.quick-chip.t-lila  { color: #c89cff; background: rgba(200,156,255,0.08); }
+.quick-chip.t-coral { color: #ff8866; background: rgba(255,136,102,0.08); }
+.quick-chip.t-aqua  { color: #66ddff; background: rgba(102,221,255,0.08); }
+.quick-chip.t-oliva { color: #ccdd66; background: rgba(204,221,102,0.08); }
+.quick-chip:active { transform: scale(0.95); }
+.quick-chip:hover { background: rgba(255,255,255,0.1); }
+.quick-chip .chip-name { font-size: 14px; }
+.quick-chip .chip-amount { font-size: 13px; color: #fff66d; opacity: 0.9; }
+.quick-chip.chip-pop {
+  animation: chipPop 0.25s ease-out;
+}
+@keyframes chipPop {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); box-shadow: 0 0 14px currentColor; }
+}
+
+/* ============================================
+   AMBIENT PARTICLES (floating throng dust)
+   ============================================ */
+.particle {
+  position: fixed;
+  bottom: -10px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor, 0 0 14px currentColor;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  animation: particleFloat var(--dur, 14s) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+@keyframes particleFloat {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  8% { opacity: 0.55; }
+  50% { transform: translateY(-50vh) translateX(var(--drift, 0px)); opacity: 0.6; }
+  92% { opacity: 0.4; }
+  100% { transform: translateY(-110vh) translateX(var(--drift, 0px)); opacity: 0; }
+}
+
 /* === INSTALL PROMPT MODAL === */
 .install-modal-backdrop { z-index: 300; }
 .install-modal { border-color: #7df9aa; box-shadow: 0 0 40px rgba(125,249,170,0.5), 8px 8px 0 #c89cff; }

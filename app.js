@@ -893,7 +893,10 @@ function buildColonyDOM() {
         <img class="sprite" src="${SPRITES[p.sprite] || SPRITES.A_think}" alt="${p.name}">
         <div class="children-badge"><span data-children-for="${p.id}">0</span></div>
       </div>
-      <div class="label"><span data-name-for="${p.id}">${p.name}</span> · <span data-budget-for="${p.id}">${p.budget}</span>€</div>
+      <div class="papa-progress" title="presupuesto consumido">
+        <div class="papa-progress-fill" data-progress-for="${p.id}" style="width:0%"></div>
+      </div>
+      <div class="label"><span data-name-for="${p.id}">${p.name}</span> · <span data-spent-for="${p.id}">0</span>/<span data-budget-for="${p.id}">${p.budget}</span>€</div>
     `;
     el.addEventListener('click', () => { selectPapaUI(p.id); beep(); coo(p.id); });
     wrap.appendChild(el);
@@ -953,6 +956,25 @@ function renderColony() {
     el.querySelector(`[data-children-for="${p.id}"]`).textContent = counts[p.id];
     el.querySelector(`[data-budget-for="${p.id}"]`).textContent = p.budget;
     el.querySelector(`[data-name-for="${p.id}"]`).textContent = p.name;
+    const spentEl = el.querySelector(`[data-spent-for="${p.id}"]`);
+    if (spentEl) spentEl.textContent = Math.round(spent);
+    // Progress bar: width + color
+    const pctRaw = p.budget > 0 ? (spent / p.budget) * 100 : 0;
+    const pct = Math.min(100, pctRaw);
+    const fill = el.querySelector(`[data-progress-for="${p.id}"]`);
+    if (fill) {
+      fill.style.width = pct + '%';
+      fill.classList.remove('warn', 'over');
+      if (pctRaw >= 100) fill.classList.add('over');
+      else if (pctRaw >= 70) fill.classList.add('warn');
+    }
+    // Color the children-badge too
+    const badge = el.querySelector('.children-badge');
+    if (badge) {
+      badge.classList.remove('badge-warn', 'badge-over');
+      if (pctRaw >= 100) badge.classList.add('badge-over');
+      else if (pctRaw >= 70) badge.classList.add('badge-warn');
+    }
     const spriteEl = el.querySelector('.sprite');
     if (spriteEl) {
       const want = sick ? SPRITES.A_skeptical : (SPRITES[p.sprite] || SPRITES.A_think);
@@ -1866,6 +1888,28 @@ function resetMonthBtn() {
 function isMobileViewport() { return window.matchMedia('(max-width: 600px)').matches; }
 
 /* ============================================
+   AMBIENT PARTICLES (floating throng dust)
+   ============================================ */
+function spawnAmbientParticles() {
+  // limpia previos por si reinit
+  document.querySelectorAll('.particle.ambient').forEach(p => p.remove());
+  const count = isMobileViewport() ? 5 : 8;
+  const colors = ['#ff6ec7', '#7df9aa', '#c89cff', '#fff66d', '#66ddff'];
+  for (let i = 0; i < count; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle ambient';
+    p.style.left = (4 + Math.random() * 92) + '%';
+    p.style.color = colors[Math.floor(Math.random() * colors.length)];
+    p.style.setProperty('--dur', (10 + Math.random() * 8) + 's');
+    p.style.setProperty('--delay', (-Math.random() * 12) + 's');
+    p.style.setProperty('--drift', ((Math.random() - 0.5) * 80) + 'px');
+    p.style.width = (3 + Math.random() * 3) + 'px';
+    p.style.height = p.style.width;
+    document.body.appendChild(p);
+  }
+}
+
+/* ============================================
    26. PWA INSTALL PROMPT
    ============================================ */
 let deferredInstallPrompt = null;
@@ -2060,6 +2104,62 @@ function rebuildConceptHints() {
     opt.value = name;
     list.appendChild(opt);
   }
+  renderQuickChips();
+}
+
+/* Quick-add chips: top 5 most-frequent concepts of last 6 months
+   Tap → fills concepto + last amount + last papa + last tutor in one go. */
+function renderQuickChips() {
+  const container = document.getElementById('quickChips');
+  if (!container) return;
+  const counts = {};
+  const last6 = new Set();
+  let m = monthKey(new Date());
+  for (let i = 0; i < 6; i++) { last6.add(m); m = shiftMonth(m, -1); }
+  for (const e of state.expenses) {
+    if (e.type === 'settlement') continue;
+    if (!e.name) continue;
+    if (!last6.has(monthKey(new Date(e.timestamp)))) continue;
+    if (!counts[e.name]) counts[e.name] = { count: 0, lastAmount: e.amount, lastPapa: e.papaId, lastTutor: e.tutor, lastSplit: e.split, lastTs: e.timestamp };
+    counts[e.name].count++;
+    if (e.timestamp > counts[e.name].lastTs) {
+      counts[e.name].lastAmount = e.amount;
+      counts[e.name].lastPapa = e.papaId;
+      counts[e.name].lastTutor = e.tutor;
+      counts[e.name].lastSplit = e.split;
+      counts[e.name].lastTs = e.timestamp;
+    }
+  }
+  const top = Object.entries(counts).sort((a, b) => b[1].count - a[1].count).slice(0, 5);
+  container.innerHTML = '';
+  if (top.length === 0) { container.style.display = 'none'; return; }
+  container.style.display = '';
+  for (const [name, info] of top) {
+    const papa = getPapaById(info.lastPapa);
+    const chip = document.createElement('button');
+    chip.className = 'quick-chip ' + (papa?.cls || '');
+    chip.type = 'button';
+    chip.title = name + ' · ' + fmt(info.lastAmount) + '€ · ' + (papa?.name || '');
+    chip.innerHTML = `<span class="chip-name">${name}</span><span class="chip-amount">${fmt(info.lastAmount)}€</span>`;
+    chip.addEventListener('click', () => {
+      document.getElementById('concepto').value = name;
+      document.getElementById('amount').value = info.lastAmount;
+      if (info.lastPapa && getPapaById(info.lastPapa)) selectPapaUI(info.lastPapa);
+      if (info.lastTutor) selectTutorUI(info.lastTutor);
+      if (info.lastSplit) {
+        const key = splitKey(info.lastSplit);
+        const sel = document.getElementById('splitSelect');
+        if (sel) { sel.value = key; selectedSplit = key; }
+      }
+      beep(1300);
+      // pequeño "wiggle" del chip
+      chip.classList.add('chip-pop');
+      setTimeout(() => chip.classList.remove('chip-pop'), 250);
+      // foco en el feed
+      document.getElementById('amount').focus();
+    });
+    container.appendChild(chip);
+  }
 }
 
 /* ============================================
@@ -2150,8 +2250,8 @@ function bindEvents() {
     ensureAudio();
     document.getElementById('boot').classList.add('hide');
     modemDial();
+    spawnAmbientParticles();
     setTimeout(() => speakSet('idle'), 600);
-    // Mostrar prompt de instalación si no está instalada todavía
     setTimeout(() => maybeShowInstallPrompt(), 1200);
   });
 
