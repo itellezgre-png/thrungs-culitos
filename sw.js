@@ -1,11 +1,11 @@
 /* ===============================================
-   THRONG-WALLET // service worker (v1.3)
+   THRONG-WALLET // service worker (v1.7)
    - Network-first para HTML/CSS/JS (updates instantáneos)
    - Cache-first para sprites/fonts (raramente cambian)
    - Funciona offline con cache de fallback
    =============================================== */
 
-const CACHE = 'thrungs-money-v1.3';
+const CACHE = 'thrungs-money-v1.7';
 const ASSETS = [
   './',
   './index.html',
@@ -19,6 +19,7 @@ const ASSETS = [
   './sprites/A_talk.gif',
   './sprites/C_talk.gif',
   './sprites/D_talk.gif',
+  './05.%20Welcome%20Progress.mp3',
   'https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap'
 ];
 

@@ -1,14 +1,18 @@
 /* ===============================================
-   THRONG-WALLET // app.js (v1.1)
+   THRONG-WALLET // app.js (v1.7)
    ─────────────────────────────────────────────
-   Cambios sobre v1.0:
-   - PWA (registro de service worker en index.html)
-   - Papas custom (state.papas dinámico, max 6, 6 color-slots)
-   - Fecha editable por gasto
+   Highlights:
+   - PWA (network-first SW, offline)
+   - Papas custom (state.papas dinámico, max 6 slots)
    - Reparto por gasto (50/50, 100% Isi, 100% Gayle)
-   - Liquidación entre tutores (settlement transactions)
-   - Autocomplete del concepto + búsqueda en histórico
-   - Responsive (gestionado en CSS)
+   - Liquidaciones entre tutores — solo desde HISTORY
+     (cualquier ciclo, retroactivo)
+   - Mandelbrot background en mundos liquidados,
+     paleta basada en los papas de ese mes
+   - Settle ritual: animación cinemática full-screen
+     (vignette + rays + monedas volando + sonido)
+   - Templo del Ahorro (metas comunes)
+   - Cloud sync Supabase + i18n ES/EN + Música BG
    =============================================== */
 
 
@@ -63,15 +67,49 @@ const DEFAULT_SETTINGS = {
   splitModel: 'half',
   masterVolume: 0.6,
   worldChatter: 'normal',
-  lang: 'es'
+  lang: 'es',
+  musicPlaying: true,
+  musicVolume: 0.4
 };
+
+const BGM_FILE = '05.%20Welcome%20Progress.mp3';
 
 /* ============================================
    1b. i18n (LOCALES, t() helper)
    ============================================ */
 const LOCALES = {
   es: {
-    'tab.colony': 'COLONIA', 'tab.world': 'MUNDO', 'tab.stats': 'STATS', 'tab.settings': 'AJUSTES',
+    'tab.colony': 'COLONIA', 'tab.world': 'MUNDO', 'tab.stats': 'STATS', 'tab.temple': 'TEMPLO', 'tab.settings': 'AJUSTES',
+    'hud.projection': 'PROY',
+    'temple.title': '🏛 TEMPLO DEL AHORRO',
+    'temple.hint': 'Metas comunes de ahorro. Cada vez que metáis dinero, los Thronglets peregrinan al templo.',
+    'temple.add_goal': '➕ NUEVA META',
+    'temple.empty': 'Aún no hay metas. Crea la primera y empezad a peregrinar.',
+    'goal.title': 'META DE AHORRO',
+    'goal.new': 'NUEVA META',
+    'goal.edit': 'EDITAR META',
+    'goal.name': 'Nombre de la meta',
+    'goal.target': 'Objetivo (€)',
+    'goal.deadline_opt': 'Fecha objetivo (opcional)',
+    'goal.emoji': 'Emoji / símbolo',
+    'goal.until': 'hasta',
+    'goal.add_savings': 'AÑADIR AHORRO',
+    'goal.completed': 'COMPLETADA',
+    'confirm.delete_goal': '¿Borrar esta meta? Se perderán todas las aportaciones registradas.',
+    'savings.title': '💰 AÑADIR AHORRO',
+    'savings.amount': 'Importe (€)',
+    'savings.tutor': 'Quien aporta',
+    'savings.both': 'AMBOS',
+    'savings.note': 'Nota (opcional)',
+    'savings.add': 'AÑADIR',
+    'settings.music': '🎵 MÚSICA DE FONDO',
+    'settings.music_hint': 'Música ambiental Throng. Empieza al entrar a la app.',
+    'settings.music_play': 'REPRODUCIR',
+    'settings.music_vol': 'VOL. MÚSICA',
+    'speak.goal_created': 'Meta creada en el templo.',
+    'speak.goal_updated': 'Meta actualizada.',
+    'speak.goal_completed': '¡META «{name}» COMPLETADA, tutor!',
+    'speak.goal_progress': '«{name}»: te quedan {remaining} €.',
     'boot.hint': '[ toca cualquier sitio para entrar ]',
     'boot.line.industries': 'THRONGNET INDUSTRIES (c) 1994-26',
     'boot.line.init': '> initializing colony...........[OK]',
@@ -86,6 +124,9 @@ const LOCALES = {
     'save.now': 'ahora', 'save.no_changes': 'sin cambios',
     'deudas.balance': 'BALANCE', 'deudas.by_split': 'POR REPARTO', 'deudas.gross': 'DIFERENCIA BRUTA',
     'deudas.balanced': '⚖ EN EQUILIBRIO', 'deudas.owes': '{from} ⇒ {to}: {amount} €', 'deudas.settle': '💸 LIQUIDAR',
+    'deudas.settle_hint_history': 'liquida desde 📜 HISTÓRICO',
+    'ritual.title': 'LIQUIDACIÓN',
+    'ritual.tagline': 'EL CICLO SE CIERRA',
     'feed.papa': 'PAPA', 'feed.tutor': 'TUTOR', 'feed.amount': '€', 'feed.date': 'FECHA', 'feed.split': 'REPARTO', 'feed.feed': 'ALIMENTAR',
     'feed.sheet_title': 'NUEVO GASTO',
     'feed.concept_placeholder': 'concepto (cena indio, netflix...)',
@@ -99,6 +140,8 @@ const LOCALES = {
     'history.filter.all': 'TODOS', 'history.filter.settlement': 'LIQUID.',
     'history.empty': 'Sin Thronglets en esta selección.',
     'history.total_isi': 'ISI', 'history.total_gayle': 'GAYLE', 'history.total_all': 'TOTAL',
+    'history.settle_cycle': '💸 LIQUIDAR ESTE CICLO',
+    'history.settle_cycle_done': '✓ CICLO LIQUIDADO',
     'stats.title': 'ANÁLISIS THRONG', 'stats.accumulated': 'ACUMULADO', 'stats.since_dawn': 'desde el inicio de los tiempos',
     'stats.monthly_avg': 'MEDIA MENSUAL', 'stats.period': '— período —',
     'stats.last_n_months': 'últimos {n} meses (con recurrentes)',
@@ -217,7 +260,37 @@ const LOCALES = {
     'pwa.dash': '—'
   },
   en: {
-    'tab.colony': 'COLONY', 'tab.world': 'WORLD', 'tab.stats': 'STATS', 'tab.settings': 'SETTINGS',
+    'tab.colony': 'COLONY', 'tab.world': 'WORLD', 'tab.stats': 'STATS', 'tab.temple': 'TEMPLE', 'tab.settings': 'SETTINGS',
+    'hud.projection': 'PROJ',
+    'temple.title': '🏛 SAVINGS TEMPLE',
+    'temple.hint': 'Shared savings goals. Every time you add money, the Thronglets pilgrimage to the temple.',
+    'temple.add_goal': '➕ NEW GOAL',
+    'temple.empty': 'No goals yet. Create the first and start the pilgrimage.',
+    'goal.title': 'SAVINGS GOAL',
+    'goal.new': 'NEW GOAL',
+    'goal.edit': 'EDIT GOAL',
+    'goal.name': 'Goal name',
+    'goal.target': 'Target (€)',
+    'goal.deadline_opt': 'Target date (optional)',
+    'goal.emoji': 'Emoji / symbol',
+    'goal.until': 'until',
+    'goal.add_savings': 'ADD SAVINGS',
+    'goal.completed': 'COMPLETED',
+    'confirm.delete_goal': 'Delete this goal? All recorded contributions will be lost.',
+    'savings.title': '💰 ADD SAVINGS',
+    'savings.amount': 'Amount (€)',
+    'savings.tutor': 'Who contributes',
+    'savings.both': 'BOTH',
+    'savings.note': 'Note (optional)',
+    'savings.add': 'ADD',
+    'settings.music': '🎵 BACKGROUND MUSIC',
+    'settings.music_hint': 'Ambient Throng music. Starts when entering the app.',
+    'settings.music_play': 'PLAY',
+    'settings.music_vol': 'MUSIC VOL.',
+    'speak.goal_created': 'Goal created in the temple.',
+    'speak.goal_updated': 'Goal updated.',
+    'speak.goal_completed': 'GOAL «{name}» COMPLETED, tutor!',
+    'speak.goal_progress': '«{name}»: {remaining} € to go.',
     'boot.hint': '[ tap anywhere to enter ]',
     'boot.line.industries': 'THRONGNET INDUSTRIES (c) 1994-26',
     'boot.line.init': '> initializing colony...........[OK]',
@@ -232,6 +305,9 @@ const LOCALES = {
     'save.now': 'now', 'save.no_changes': 'no changes',
     'deudas.balance': 'BALANCE', 'deudas.by_split': 'BY SPLIT', 'deudas.gross': 'GROSS DIFFERENCE',
     'deudas.balanced': '⚖ BALANCED', 'deudas.owes': '{from} ⇒ {to}: €{amount}', 'deudas.settle': '💸 SETTLE',
+    'deudas.settle_hint_history': 'settle from 📜 HISTORY',
+    'ritual.title': 'SETTLEMENT',
+    'ritual.tagline': 'THE CYCLE CLOSES',
     'feed.papa': 'PAPA', 'feed.tutor': 'TUTOR', 'feed.amount': '€', 'feed.date': 'DATE', 'feed.split': 'SPLIT', 'feed.feed': 'FEED',
     'feed.sheet_title': 'NEW EXPENSE',
     'feed.concept_placeholder': 'description (taco tuesday, netflix...)',
@@ -245,6 +321,8 @@ const LOCALES = {
     'history.filter.all': 'ALL', 'history.filter.settlement': 'SETTLE',
     'history.empty': 'No Thronglets in this selection.',
     'history.total_isi': 'ISI', 'history.total_gayle': 'GAYLE', 'history.total_all': 'TOTAL',
+    'history.settle_cycle': '💸 SETTLE THIS CYCLE',
+    'history.settle_cycle_done': '✓ CYCLE SETTLED',
     'stats.title': 'THRONG ANALYTICS', 'stats.accumulated': 'TOTAL', 'stats.since_dawn': 'since the dawn of time',
     'stats.monthly_avg': 'MONTHLY AVG', 'stats.period': '— period —',
     'stats.last_n_months': 'last {n} months (incl. recurring)',
@@ -436,24 +514,23 @@ function migrate(data) {
   if (!data || typeof data !== 'object') return null;
   if (!Array.isArray(data.expenses)) data.expenses = [];
   if (!data.settings) data.settings = {};
-  // migrate old settings.budgets to per-papa budgets
   const oldBudgets = data.settings.budgets || {};
-  // Build papas from state or defaults
   if (!Array.isArray(data.papas)) {
     data.papas = JSON.parse(JSON.stringify(DEFAULT_PAPAS));
-    // apply old budgets if present
     for (const p of data.papas) {
       if (oldBudgets[p.id] !== undefined) p.budget = oldBudgets[p.id];
     }
   }
-  // strip old budgets field
   delete data.settings.budgets;
   data.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
-  // Migrate expenses: ensure bornSick + split fields
   for (const e of data.expenses) {
     if (typeof e.bornSick === 'undefined') e.bornSick = false;
     if (!e.split) e.split = { isi: 0.5, gayle: 0.5 };
     if (!e.type) e.type = (e.papaId === 'settlement') ? 'settlement' : 'expense';
+  }
+  if (!Array.isArray(data.goals)) data.goals = [];
+  for (const g of data.goals) {
+    if (!Array.isArray(g.contributions)) g.contributions = [];
   }
   return data;
 }
@@ -986,6 +1063,7 @@ function renderColony() {
   document.getElementById('totalPill').classList.toggle('alert', anySick);
   document.getElementById('bornCount').textContent = monthly.length;
   document.getElementById('month').textContent = monthLabel(monthKey(new Date()));
+  renderProjection();
 }
 
 function renderDeudas() {
@@ -1186,6 +1264,7 @@ function showView(name) {
   } else { stopWorldTick(); beep(700); }
   if (name === 'settings') populateSettings();
   if (name === 'stats') renderStats();
+  if (name === 'temple') buildTempleView();
 }
 
 /* ============================================
@@ -1282,8 +1361,12 @@ function renderWorld() {
     el.style.setProperty('--tutor-color', tutorColor);
     el.dataset.expenseId = e.id;
     el.dataset.tutor = e.tutor.toLowerCase();
+    const evoLvl = evolutionLevel(e);
+    if (evoLvl > 1) el.dataset.evo = evoLvl;
+    const crown = evolutionCrown(evoLvl);
     el.innerHTML = `
       <div class="mini-tag">${e.name.substring(0,18)}</div>
+      ${crown ? `<div class="evo-crown">${crown}</div>` : ''}
       <div class="mini-frame">
         <img class="sprite" src="${SPRITES.A_think}" alt="">
       </div>
@@ -1304,6 +1387,8 @@ function renderWorld() {
     setTimeout(() => setAnim(t, pickAnimState(null, e.bornSick)), Math.random()*2000);
   }
   renderHistory();
+  renderMandelbrotBackground();
+  refreshHistorySettleBtn();
 }
 function startWorldTick() {
   if (worldRaf) return;
@@ -1455,6 +1540,177 @@ function ambientTick() {
 }
 
 /* ============================================
+   11b. MANDELBROT BACKGROUND (settled worlds)
+   ─────────────────────────────────────────────
+   Worlds (months) with at least one settlement get
+   a fractal canvas painted with that month's papa
+   palette as backdrop. Soft, drifty, low-res.
+   ============================================ */
+function hexToRgb(hex) {
+  const h = (hex || '#ff6ec7').replace('#', '');
+  const m = h.length === 3
+    ? h.split('').map(c => parseInt(c + c, 16))
+    : (h.match(/.{2}/g) || []).map(c => parseInt(c, 16));
+  return { r: m[0] || 0, g: m[1] || 0, b: m[2] || 0 };
+}
+
+function buildPapaPalette(monthExpenses) {
+  // Final palette: low iteration → bright papa color, high iteration → fades to deep purple
+  const counts = {};
+  let total = 0;
+  for (const e of monthExpenses) {
+    if (e.type === 'settlement') continue;
+    counts[e.papaId] = (counts[e.papaId] || 0) + 1;
+    total++;
+  }
+
+  // If no expenses this month, use a default fallback palette
+  let papaColors;
+  if (total === 0) {
+    papaColors = [
+      hexToRgb(COLOR_SLOTS['t-rosa'].color),
+      hexToRgb(COLOR_SLOTS['t-menta'].color),
+      hexToRgb(COLOR_SLOTS['t-lila'].color)
+    ].map(c => ({ ...c, weight: 1 }));
+  } else {
+    papaColors = [];
+    for (const papa of state.papas) {
+      const c = counts[papa.id] || 0;
+      if (c === 0) continue;
+      const slot = COLOR_SLOTS[papa.cls];
+      if (!slot) continue;
+      const rgb = hexToRgb(slot.color);
+      papaColors.push({ r: rgb.r, g: rgb.g, b: rgb.b, weight: c / total });
+    }
+    if (papaColors.length === 0) {
+      papaColors = [{ ...hexToRgb(COLOR_SLOTS['t-rosa'].color), weight: 1 }];
+    }
+  }
+
+  // Build a weighted, ordered palette by repeating each color proportional to weight
+  const SLOTS = 32;
+  const palette = [];
+  for (const pc of papaColors) {
+    const repeats = Math.max(1, Math.round(pc.weight * SLOTS));
+    for (let i = 0; i < repeats; i++) palette.push([pc.r, pc.g, pc.b]);
+  }
+  // Shuffle slightly so neighboring colors swirl
+  const out = [];
+  for (let i = 0; i < palette.length; i++) {
+    const j = (i * 7 + 3) % palette.length;
+    out.push(palette[j]);
+  }
+  return out;
+}
+
+function drawMandelbrot(canvas, palette) {
+  const w = canvas.width, h = canvas.height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: false });
+  if (!ctx) return;
+  const img = ctx.createImageData(w, h);
+  const data = img.data;
+  const maxIter = 56;
+
+  // Centered, slightly zoomed onto the main bulb (classic look)
+  const aspect = w / h;
+  const yRange = 2.2;
+  const xRange = yRange * aspect;
+  const xCenter = -0.6;
+  const yCenter = 0;
+  const xMin = xCenter - xRange / 2;
+  const xMax = xCenter + xRange / 2;
+  const yMin = yCenter - yRange / 2;
+  const yMax = yCenter + yRange / 2;
+
+  for (let py = 0; py < h; py++) {
+    const y0 = yMin + (yMax - yMin) * (py / h);
+    for (let px = 0; px < w; px++) {
+      const x0 = xMin + (xMax - xMin) * (px / w);
+      let x = 0, y = 0, iter = 0;
+      while (x * x + y * y < 4 && iter < maxIter) {
+        const xNew = x * x - y * y + x0;
+        y = 2 * x * y + y0;
+        x = xNew;
+        iter++;
+      }
+      const p = (py * w + px) * 4;
+      if (iter === maxIter) {
+        // Inside the Mandelbrot set → fully transparent (lets stage gradient show)
+        data[p] = 0; data[p + 1] = 0; data[p + 2] = 0; data[p + 3] = 0;
+      } else {
+        const t = iter / maxIter;
+        const idx = Math.min(palette.length - 1, Math.floor(t * palette.length));
+        const c = palette[idx] || [180, 120, 220];
+        // Brighter near edge, dimmer deep
+        const brightness = 0.4 + 0.6 * (1 - Math.pow(t, 0.6));
+        data[p]     = Math.min(255, Math.round(c[0] * brightness));
+        data[p + 1] = Math.min(255, Math.round(c[1] * brightness));
+        data[p + 2] = Math.min(255, Math.round(c[2] * brightness));
+        data[p + 3] = Math.round(255 * (0.4 + 0.6 * (1 - t)));
+      }
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+let lastMandelbrotKey = null;
+function renderMandelbrotBackground() {
+  const stage = document.getElementById('worldStage');
+  const canvas = document.getElementById('mandelbrotBg');
+  if (!stage || !canvas) return;
+
+  const settles = settlementsForMonth(worldMonthKey);
+  if (settles.length === 0) {
+    stage.classList.remove('has-settle');
+    lastMandelbrotKey = null;
+    return;
+  }
+  stage.classList.add('has-settle');
+
+  // Only paint when world view is visible (avoid wasted work)
+  if (currentView !== 'world') return;
+
+  // Cache key: monthKey + settle count + #expenses + total amount → invalidates when month changes meaningfully
+  const monthExp = expensesForMonth(worldMonthKey);
+  const sum = monthExp.reduce((s, e) => s + e.amount, 0);
+  const stageW = stage.clientWidth;
+  const stageH = stage.clientHeight;
+  if (!stageW || !stageH) {
+    // Stage not yet laid out — try again on next tick
+    requestAnimationFrame(() => renderMandelbrotBackground());
+    return;
+  }
+  const key = `${worldMonthKey}|${settles.length}|${monthExp.length}|${sum.toFixed(2)}|${stageW}x${stageH}`;
+  if (key === lastMandelbrotKey && canvas.width > 0) return;
+  lastMandelbrotKey = key;
+
+  // Render at reduced resolution for speed + pixelated aesthetic
+  const targetMax = 160;
+  let cw, ch;
+  if (stageW >= stageH) { cw = targetMax; ch = Math.max(80, Math.round(targetMax * stageH / stageW)); }
+  else { ch = targetMax; cw = Math.max(80, Math.round(targetMax * stageW / stageH)); }
+  canvas.width = cw;
+  canvas.height = ch;
+
+  const palette = buildPapaPalette(monthExp);
+  drawMandelbrot(canvas, palette);
+}
+
+function refreshHistorySettleBtn() {
+  const btn = document.getElementById('historySettleBtn');
+  if (!btn) return;
+  const settles = settlementsForMonth(worldMonthKey);
+  if (settles.length > 0) {
+    btn.textContent = t('history.settle_cycle_done') + ' · ' + t('history.settle_cycle').replace('💸 ', '+ ');
+    btn.style.opacity = '0.85';
+  } else {
+    btn.textContent = t('history.settle_cycle');
+    btn.style.opacity = '1';
+  }
+}
+
+
+/* ============================================
    12. HISTORY PANEL
    ============================================ */
 function applyHistoryFilter(items) {
@@ -1501,6 +1757,7 @@ function renderHistory() {
   const list = document.getElementById('historyList');
   const totals = document.getElementById('historyTotals');
   if (!list) return;
+  refreshHistorySettleBtn();
   const tIsi = filtered.filter(e => e.type !== 'settlement' && e.tutor === 'Isi').reduce((s,e)=>s+e.amount, 0);
   const tGay = filtered.filter(e => e.type !== 'settlement' && e.tutor === 'Gayle').reduce((s,e)=>s+e.amount, 0);
   const tAll = tIsi + tGay;
@@ -1557,7 +1814,7 @@ function renderHistory() {
 function toggleHistory() {
   const p = document.getElementById('historyPanel');
   const isOpen = p.classList.toggle('show');
-  if (isOpen) { buildHistoryFilters(); renderHistory(); chime(); } else beep(700);
+  if (isOpen) { buildHistoryFilters(); renderHistory(); refreshHistorySettleBtn(); chime(); } else beep(700);
 }
 
 /* ============================================
@@ -1813,17 +2070,207 @@ function rebuildPapaUI() {
 }
 
 /* ============================================
+   15b. SETTLE RITUAL
+   ─────────────────────────────────────────────
+   Full-screen cinematic moment fired right after
+   a settlement is recorded. Vignette + radial burst
+   + conic rays + tutor-to-tutor coin shower + sound.
+   Duration ≈ 2.6s.
+   ============================================ */
+let ritualBusy = false;
+
+function ritualSound() {
+  let ctx;
+  try { ctx = ensureAudio(); } catch (e) { return; }
+  const t0 = ctx.currentTime;
+
+  // 1) Deep impact (boom) on entrance
+  try {
+    const boom = ctx.createOscillator();
+    const boomG = ctx.createGain();
+    boom.type = 'sine';
+    boom.frequency.setValueAtTime(110, t0);
+    boom.frequency.exponentialRampToValueAtTime(38, t0 + 0.55);
+    boom.connect(boomG).connect(out());
+    env(boomG, t0, 0.005, 0.12, 0.5, 0.42, 0.32);
+    boom.start(t0); boom.stop(t0 + 0.7);
+  } catch (e) {}
+
+  // 2) Sub-bass shimmer pad
+  try {
+    const pad = ctx.createOscillator();
+    const padG = ctx.createGain();
+    pad.type = 'triangle';
+    pad.frequency.setValueAtTime(196, t0 + 0.05);
+    pad.connect(padG).connect(out());
+    env(padG, t0 + 0.05, 0.15, 0.4, 0.4, 1.6, 0.1);
+    pad.start(t0 + 0.05); pad.stop(t0 + 2.4);
+  } catch (e) {}
+
+  // 3) Ascending sparkle arpeggio (counting the gold)
+  const arpFreqs = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98, 2093.00];
+  arpFreqs.forEach((f, i) => {
+    try {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = f;
+      osc.connect(g).connect(out());
+      const start = t0 + 0.35 + i * 0.085;
+      env(g, start, 0.005, 0.06, 0.4, 0.18, 0.16);
+      osc.start(start); osc.stop(start + 0.3);
+    } catch (e) {}
+  });
+
+  // 4) Final ringing chord (release)
+  setTimeout(() => {
+    try {
+      const ctx2 = ensureAudio();
+      const tx = ctx2.currentTime;
+      [523.25, 659.25, 783.99].forEach((f, i) => {
+        const osc = ctx2.createOscillator();
+        const g = ctx2.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = f;
+        osc.connect(g).connect(out());
+        env(g, tx + i * 0.02, 0.01, 0.4, 0.5, 0.8, 0.14);
+        osc.start(tx); osc.stop(tx + 1.4);
+      });
+    } catch (e) {}
+  }, 1150);
+
+  // 5) Sparkle dust at the end
+  setTimeout(() => {
+    try {
+      const ctx2 = ensureAudio();
+      const tx = ctx2.currentTime;
+      for (let i = 0; i < 8; i++) {
+        const osc = ctx2.createOscillator();
+        const g = ctx2.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = 1600 + Math.random() * 1200;
+        osc.connect(g).connect(out());
+        env(g, tx + i * 0.04, 0.003, 0.04, 0.3, 0.06, 0.09);
+        osc.start(tx + i * 0.04); osc.stop(tx + i * 0.04 + 0.12);
+      }
+    } catch (e) {}
+  }, 1900);
+}
+
+function spawnRitualCoins(fromIsRight) {
+  const wrap = document.getElementById('ritualCoins');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  const cx = W / 2;
+  const cy = H / 2;
+
+  // From-tutor side (start point) and to-tutor side (end point)
+  // Both rendered around the centered actor row, ~70-160 px offset to either side
+  const sideOffset = Math.min(220, W * 0.32);
+  const startX = fromIsRight ? cx + sideOffset : cx - sideOffset;
+  const endX   = fromIsRight ? cx - sideOffset : cx + sideOffset;
+  const baseY  = cy - 4;
+
+  const NUM_COINS = 14;
+  for (let i = 0; i < NUM_COINS; i++) {
+    const coin = document.createElement('div');
+    coin.className = 'ritual-coin';
+    // Arc apex randomised
+    const xJit = (Math.random() - 0.5) * 80;
+    const yJit = (Math.random() - 0.5) * 40;
+    const xmid = (startX + endX) / 2 + xJit;
+    const ymid = baseY - 160 - Math.random() * 100;
+    const yEnd = baseY + yJit + 20;
+    // Place at the center for the transform-translate offsets to make sense
+    coin.style.left = '0';
+    coin.style.top  = '0';
+    coin.style.setProperty('--x0', startX + 'px');
+    coin.style.setProperty('--y0', baseY + 'px');
+    coin.style.setProperty('--xmid', xmid + 'px');
+    coin.style.setProperty('--ymid', ymid + 'px');
+    coin.style.setProperty('--x1', endX + 'px');
+    coin.style.setProperty('--y1', yEnd + 'px');
+    coin.style.setProperty('--delay', (200 + i * 75) + 'ms');
+    coin.style.setProperty('--dur', (900 + Math.random() * 350) + 'ms');
+    wrap.appendChild(coin);
+  }
+  // Trigger animation in next frame so the browser registers initial position first
+  requestAnimationFrame(() => {
+    wrap.querySelectorAll('.ritual-coin').forEach(c => c.classList.add('animate'));
+  });
+}
+
+function playSettleRitual({ fromTutor, toTutor, amount }) {
+  if (ritualBusy) return;
+  const overlay = document.getElementById('settleRitual');
+  if (!overlay) return;
+  ritualBusy = true;
+
+  // Set actors
+  const fromEl = document.getElementById('ritualFrom');
+  const toEl   = document.getElementById('ritualTo');
+  const amtEl  = document.getElementById('ritualAmount');
+  if (fromEl) {
+    fromEl.textContent = fromTutor.toUpperCase();
+    fromEl.className = 'ritual-tutor from ' + fromTutor.toLowerCase();
+  }
+  if (toEl) {
+    toEl.textContent = toTutor.toUpperCase();
+    toEl.className = 'ritual-tutor to ' + toTutor.toLowerCase();
+  }
+  if (amtEl) amtEl.textContent = fmt(amount) + ' €';
+
+  // Reset animations (force restart by removing/re-adding hidden + reflow)
+  overlay.hidden = false;
+  // Force reflow so animations re-trigger if ritual was just played
+  overlay.querySelectorAll('.ritual-burst, .ritual-rays, .ritual-vignette, .ritual-content, .ritual-title, .ritual-amount, .ritual-tagline')
+    .forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
+
+  // Coins fly from the FROM tutor (left or right) toward the TO tutor.
+  // Default layout in markup: FROM on the left, TO on the right.
+  spawnRitualCoins(/* fromIsRight= */ false);
+
+  // Sound
+  ritualSound();
+
+  // Auto-hide
+  clearTimeout(playSettleRitual._t);
+  playSettleRitual._t = setTimeout(() => {
+    overlay.hidden = true;
+    const wrap = document.getElementById('ritualCoins');
+    if (wrap) wrap.innerHTML = '';
+    ritualBusy = false;
+  }, 2700);
+}
+
+
+/* ============================================
    16. SETTLEMENT
    ============================================ */
 let settleDir = 'gayle-to-isi';
-function openSettleModal() {
+function lastDayOfMonthYMD(mKey) {
+  const [y, m] = mKey.split('-').map(Number);
+  const lastDay = new Date(y, m, 0).getDate();
+  return mKey + '-' + String(lastDay).padStart(2, '0');
+}
+function openSettleModal(prefilledDate) {
   document.getElementById('settleAmount').value = '';
   document.getElementById('settleNote').value = '';
-  document.getElementById('settleDate').value = todayYMD();
+  // If a specific date is passed (from history panel), use it; otherwise today
+  document.getElementById('settleDate').value = prefilledDate || todayYMD();
   document.querySelectorAll('#settleDir .tutor-btn').forEach(b => b.classList.toggle('active', b.dataset.settle === settleDir));
   document.getElementById('settleModal').hidden = false;
   setTimeout(() => document.getElementById('settleAmount').focus(), 50);
   beep(900);
+}
+function openSettleModalForMonth(mKey) {
+  // Pre-fills date to last day of the given month (so the settlement lives in that world)
+  const sameMonth = (mKey === monthKey(new Date()));
+  const date = sameMonth ? todayYMD() : lastDayOfMonthYMD(mKey);
+  openSettleModal(date);
 }
 function closeSettleModal() { document.getElementById('settleModal').hidden = true; }
 function saveSettlement() {
@@ -1854,10 +2301,25 @@ function saveSettlement() {
   };
   state.expenses.push(settlement); save();
   cloudPushExpense(settlement);
-  chime();
-  speak('PLOK-MOK!', t('speak.settlement_done', { from: fromTutor, to: toTutor, amount: fmt(amount) }));
   closeSettleModal();
+
+  // Hide history panel so the world (+ new Mandelbrot) is the stage behind the ritual
+  const histPanel = document.getElementById('historyPanel');
+  const reopenHistory = histPanel && histPanel.classList.contains('show');
+  if (reopenHistory) histPanel.classList.remove('show');
+
+  // Pre-render Mandelbrot so it's ready underneath when the ritual fades
+  if (currentView === 'world') renderMandelbrotBackground();
+
+  // Epic ritual moment (visual + sound)
+  playSettleRitual({ fromTutor, toTutor, amount });
+
+  // After the ritual fades, update views and optionally re-open history
   renderDeudas(); renderHistory();
+  refreshHistorySettleBtn();
+  if (reopenHistory) {
+    setTimeout(() => { histPanel.classList.add('show'); }, 2800);
+  }
 }
 
 /* ============================================
@@ -1870,6 +2332,12 @@ function populateSettings() {
   document.getElementById('volLabel').textContent = Math.round((state.settings.masterVolume || 0.6) * 100);
   document.getElementById('worldChatter').value  = state.settings.worldChatter || 'normal';
   document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === currentLang()));
+  const musicChk = document.getElementById('musicPlaying');
+  if (musicChk) musicChk.checked = state.settings.musicPlaying !== false;
+  const musicVol = document.getElementById('musicVolume');
+  if (musicVol) musicVol.value = Math.round((state.settings.musicVolume ?? 0.4) * 100);
+  const musicLbl = document.getElementById('musicVolLabel');
+  if (musicLbl) musicLbl.textContent = Math.round((state.settings.musicVolume ?? 0.4) * 100);
   updateSaveLabel();
 }
 function saveSettings() {
@@ -1877,7 +2345,14 @@ function saveSettings() {
   if (sel) state.settings.splitModel = sel.value;
   state.settings.masterVolume = parseInt(document.getElementById('masterVolume').value, 10) / 100;
   state.settings.worldChatter = document.getElementById('worldChatter').value;
+  const musicChk = document.getElementById('musicPlaying');
+  const musicVol = document.getElementById('musicVolume');
+  if (musicChk) state.settings.musicPlaying = musicChk.checked;
+  if (musicVol) state.settings.musicVolume = parseInt(musicVol.value, 10) / 100;
   setMasterVolume(state.settings.masterVolume);
+  setMusicVolume(state.settings.musicVolume);
+  if (state.settings.musicPlaying) resumeBackgroundMusic();
+  else pauseBackgroundMusic();
   save();
   cloudPushSettings();
   renderColony(); renderDeudas();
@@ -1910,6 +2385,232 @@ function resetMonthBtn() {
    18. EXPORT / IMPORT
    ============================================ */
 function isMobileViewport() { return window.matchMedia('(max-width: 600px)').matches; }
+
+/* ============================================
+   BACKGROUND MUSIC
+   ============================================ */
+let bgMusicEl = null;
+let bgMusicStarted = false;
+
+function initBackgroundMusic() {
+  bgMusicEl = document.getElementById('bgMusic');
+  if (!bgMusicEl) return;
+  bgMusicEl.src = BGM_FILE;
+  bgMusicEl.volume = state.settings.musicVolume ?? 0.4;
+}
+function startBackgroundMusic() {
+  if (!bgMusicEl || bgMusicStarted) return;
+  if (state.settings.musicPlaying === false) return;
+  bgMusicEl.volume = state.settings.musicVolume ?? 0.4;
+  bgMusicEl.play().then(() => { bgMusicStarted = true; }).catch(e => console.warn('bgm autoplay', e));
+}
+function pauseBackgroundMusic() { if (bgMusicEl) bgMusicEl.pause(); }
+function resumeBackgroundMusic() {
+  if (!bgMusicEl) return;
+  bgMusicEl.volume = state.settings.musicVolume ?? 0.4;
+  bgMusicEl.play().then(() => { bgMusicStarted = true; }).catch(()=>{});
+}
+function setMusicVolume(v) { if (bgMusicEl) bgMusicEl.volume = Math.max(0, Math.min(1, v)); }
+
+/* ============================================
+   END-OF-MONTH SPENDING PROJECTION
+   ============================================ */
+function renderProjection() {
+  const pill = document.getElementById('projectionPill');
+  const valEl = document.getElementById('projectionValue');
+  if (!pill || !valEl) return;
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const dayOfMonth = today.getDate();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const elapsed = dayOfMonth;
+  const monthly = expensesForMonth(monthKey(today));
+  const spent = monthly.reduce((s, e) => s + e.amount, 0);
+  // Need at least 2 days of data to project
+  if (elapsed < 2 || spent === 0) { pill.hidden = true; return; }
+  const projection = spent * (daysInMonth / elapsed);
+  pill.hidden = false;
+  valEl.textContent = fmt(projection);
+  // Budget vs projection: compute total budget across papas
+  const totalBudget = state.papas.reduce((s, p) => s + (p.budget || 0), 0);
+  pill.classList.remove('warn', 'over');
+  if (totalBudget > 0) {
+    if (projection >= totalBudget) pill.classList.add('over');
+    else if (projection >= totalBudget * 0.85) pill.classList.add('warn');
+  }
+}
+
+/* ============================================
+   THRONGLET EVOLUTION (months alive)
+   - Calculated at render time, no schema change
+   ============================================ */
+function evolutionLevel(expense) {
+  if (!expense.timestamp) return 1;
+  const birth = new Date(expense.timestamp);
+  const now = new Date();
+  const months = (now.getFullYear() - birth.getFullYear()) * 12 + (now.getMonth() - birth.getMonth());
+  if (months >= 5) return 3;
+  if (months >= 2) return 2;
+  return 1;
+}
+function evolutionCrown(level) {
+  if (level === 3) return '👑';
+  if (level === 2) return '✨';
+  return '';
+}
+
+/* ============================================
+   TEMPLO DEL AHORRO — goals + savings
+   - V1: localStorage only (no cloud sync of goals)
+   ============================================ */
+function getGoals() {
+  if (!Array.isArray(state.goals)) state.goals = [];
+  return state.goals;
+}
+let editingGoalId = null;
+let savingsGoalId = null;
+let savingsTutor = 'Isi';
+
+function buildTempleView() {
+  const wrap = document.getElementById('goalsList');
+  if (!wrap) return;
+  const goals = getGoals();
+  if (goals.length === 0) {
+    wrap.innerHTML = `<div class="temple-icon">🏛</div><div class="goal-empty">${t('temple.empty')}</div>`;
+    return;
+  }
+  wrap.innerHTML = `<div class="temple-icon">🏛</div>` + goals.map(g => {
+    const saved = (g.contributions || []).reduce((s, c) => s + c.amount, 0);
+    const pct = Math.min(100, (saved / g.target) * 100);
+    const complete = saved >= g.target;
+    const contribIsi = (g.contributions || []).filter(c => c.tutor === 'Isi').reduce((s,c)=>s+c.amount, 0);
+    const contribGayle = (g.contributions || []).filter(c => c.tutor === 'Gayle').reduce((s,c)=>s+c.amount, 0);
+    const contribBoth = (g.contributions || []).filter(c => c.tutor === 'Both').reduce((s,c)=>s+c.amount, 0);
+    const deadlineStr = g.deadline ? new Date(g.deadline).toLocaleDateString() : '';
+    return `
+      <div class="goal-card ${complete ? 'complete' : ''}" data-goal-id="${g.id}">
+        <div class="goal-header">
+          <div class="goal-emoji">${g.emoji || '🏖'}</div>
+          <div class="goal-info">
+            <div class="goal-name">${g.name}</div>
+            ${deadlineStr ? `<div class="goal-deadline">${t('goal.until')} ${deadlineStr}</div>` : ''}
+          </div>
+          <button class="goal-edit-btn" data-goal-edit="${g.id}" type="button">✎</button>
+        </div>
+        <div class="goal-amounts">
+          <span class="saved">${fmt(saved)} €</span>
+          <span class="target">/ ${fmt(g.target)} €</span>
+        </div>
+        <div class="goal-progress ${complete ? 'complete' : ''}">
+          <div class="goal-progress-fill" style="width:${pct}%"></div>
+          <div class="goal-progress-text">${pct.toFixed(0)}%</div>
+        </div>
+        <div class="goal-tutors">
+          ${contribIsi > 0 ? `<span class="isi-share">ISI ${fmt(contribIsi)}€</span>` : ''}
+          ${contribGayle > 0 ? `<span class="gayle-share">GAYLE ${fmt(contribGayle)}€</span>` : ''}
+          ${contribBoth > 0 ? `<span>AMBOS ${fmt(contribBoth)}€</span>` : ''}
+        </div>
+        <div class="goal-actions">
+          <button class="goal-add-btn" data-goal-add="${g.id}" type="button">${complete ? '✓ ' + t('goal.completed') : '💰 ' + t('goal.add_savings')}</button>
+        </div>
+      </div>`;
+  }).join('');
+  // Bind events
+  wrap.querySelectorAll('[data-goal-add]').forEach(b => b.addEventListener('click', () => openSavingsModal(b.dataset.goalAdd)));
+  wrap.querySelectorAll('[data-goal-edit]').forEach(b => b.addEventListener('click', () => openGoalModal(b.dataset.goalEdit)));
+}
+
+function openGoalModal(goalId = null) {
+  editingGoalId = goalId;
+  const g = goalId ? getGoals().find(x => x.id === goalId) : null;
+  document.getElementById('goalModalTitle').textContent = g ? t('goal.edit') : t('goal.new');
+  document.getElementById('goalName').value = g?.name || '';
+  document.getElementById('goalTarget').value = g?.target || '';
+  document.getElementById('goalDeadline').value = g?.deadline || '';
+  document.getElementById('goalEmoji').value = g?.emoji || '🏖';
+  document.getElementById('goalDelete').hidden = !g;
+  document.getElementById('goalModal').hidden = false;
+  setTimeout(() => document.getElementById('goalName').focus(), 50);
+  beep(900);
+}
+function closeGoalModal() { document.getElementById('goalModal').hidden = true; editingGoalId = null; }
+function saveGoal() {
+  const name = document.getElementById('goalName').value.trim();
+  const target = parseFloat(document.getElementById('goalTarget').value);
+  const deadline = document.getElementById('goalDeadline').value || null;
+  const emoji = document.getElementById('goalEmoji').value.trim() || '🏖';
+  if (!name || isNaN(target) || target <= 0) { alert(t('alert.invalid_data')); return; }
+  const goals = getGoals();
+  if (editingGoalId) {
+    const g = goals.find(x => x.id === editingGoalId);
+    if (!g) return;
+    g.name = name; g.target = target; g.deadline = deadline; g.emoji = emoji;
+  } else {
+    goals.push({
+      id: 'g' + Date.now() + Math.random().toString(36).slice(2,6),
+      name, target, deadline, emoji,
+      createdAt: Date.now(),
+      contributions: []
+    });
+  }
+  save();
+  closeGoalModal();
+  buildTempleView();
+  chime();
+  speak('PLOK!', editingGoalId ? t('speak.goal_updated') : t('speak.goal_created'));
+}
+function deleteGoal() {
+  if (!editingGoalId) return;
+  if (!confirm(t('confirm.delete_goal'))) return;
+  state.goals = getGoals().filter(g => g.id !== editingGoalId);
+  save();
+  closeGoalModal();
+  buildTempleView();
+  alertCry();
+}
+
+function openSavingsModal(goalId) {
+  savingsGoalId = goalId;
+  const g = getGoals().find(x => x.id === goalId);
+  if (!g) return;
+  document.getElementById('savingsGoalName').textContent = `${g.emoji} ${g.name}`;
+  document.getElementById('savingsAmount').value = '';
+  document.getElementById('savingsNote').value = '';
+  document.querySelectorAll('#savingsTutorSelector .tutor-btn').forEach(b => b.classList.toggle('active', b.dataset.savingsTutor === 'Isi'));
+  savingsTutor = 'Isi';
+  document.getElementById('savingsModal').hidden = false;
+  setTimeout(() => document.getElementById('savingsAmount').focus(), 50);
+  beep(1100);
+}
+function closeSavingsModal() { document.getElementById('savingsModal').hidden = true; savingsGoalId = null; }
+function saveSavings() {
+  const amount = parseFloat(document.getElementById('savingsAmount').value);
+  const note = document.getElementById('savingsNote').value.trim();
+  if (isNaN(amount) || amount <= 0) { alert(t('alert.invalid_amount')); return; }
+  const g = getGoals().find(x => x.id === savingsGoalId);
+  if (!g) return;
+  if (!Array.isArray(g.contributions)) g.contributions = [];
+  g.contributions.push({
+    id: 'c' + Date.now() + Math.random().toString(36).slice(2,4),
+    amount, tutor: savingsTutor, note, timestamp: Date.now()
+  });
+  save();
+  closeSavingsModal();
+  buildTempleView();
+  // Mini celebration
+  chime();
+  setTimeout(chime, 200);
+  // Check if just completed
+  const totalSaved = g.contributions.reduce((s, c) => s + c.amount, 0);
+  if (totalSaved >= g.target) {
+    setTimeout(() => { chime(); setTimeout(chime, 150); setTimeout(chime, 350); }, 400);
+    speak('KRII-MOK!', t('speak.goal_completed', { name: g.name }));
+  } else {
+    const remaining = g.target - totalSaved;
+    speak('PLOK!', t('speak.goal_progress', { remaining: fmt(remaining), name: g.name }));
+  }
+}
 
 /* ============================================
    AMBIENT PARTICLES (floating throng dust)
@@ -2209,6 +2910,38 @@ function bindEvents() {
     document.getElementById('volLabel').textContent = e.target.value;
     if (audio) setMasterVolume(parseInt(e.target.value,10) / 100);
   });
+
+  // Music live controls
+  const musicVolEl = document.getElementById('musicVolume');
+  if (musicVolEl) musicVolEl.addEventListener('input', (e) => {
+    document.getElementById('musicVolLabel').textContent = e.target.value;
+    setMusicVolume(parseInt(e.target.value, 10) / 100);
+  });
+  const musicChkEl = document.getElementById('musicPlaying');
+  if (musicChkEl) musicChkEl.addEventListener('change', (e) => {
+    state.settings.musicPlaying = e.target.checked;
+    if (e.target.checked) resumeBackgroundMusic();
+    else pauseBackgroundMusic();
+  });
+
+  // Templo del Ahorro
+  document.getElementById('addGoalBtn').addEventListener('click', () => openGoalModal(null));
+  document.getElementById('goalClose').addEventListener('click', closeGoalModal);
+  document.getElementById('goalCancel').addEventListener('click', closeGoalModal);
+  document.getElementById('goalSave').addEventListener('click', saveGoal);
+  document.getElementById('goalDelete').addEventListener('click', deleteGoal);
+  document.getElementById('goalModal').addEventListener('click', (e) => { if (e.target.id === 'goalModal') closeGoalModal(); });
+
+  // Savings (within goals)
+  document.getElementById('savingsClose').addEventListener('click', closeSavingsModal);
+  document.getElementById('savingsCancel').addEventListener('click', closeSavingsModal);
+  document.getElementById('savingsSave').addEventListener('click', saveSavings);
+  document.getElementById('savingsModal').addEventListener('click', (e) => { if (e.target.id === 'savingsModal') closeSavingsModal(); });
+  document.querySelectorAll('#savingsTutorSelector .tutor-btn').forEach(b => b.addEventListener('click', () => {
+    savingsTutor = b.dataset.savingsTutor;
+    document.querySelectorAll('#savingsTutorSelector .tutor-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+  }));
   document.getElementById('saveSettings').addEventListener('click', saveSettings);
   document.getElementById('wipeAllBtn').addEventListener('click', wipeAll);
   document.getElementById('resetMonthBtn').addEventListener('click', resetMonthBtn);
@@ -2240,8 +2973,7 @@ function bindEvents() {
   document.getElementById('papaDelete').addEventListener('click', deletePapa);
   document.getElementById('papaModal').addEventListener('click', (e) => { if (e.target.id === 'papaModal') closePapaModal(); });
 
-  // Settlement
-  document.getElementById('settleBtn').addEventListener('click', openSettleModal);
+  // Settlement (entry point now lives in History panel; modal wiring stays)
   document.getElementById('settleClose').addEventListener('click', closeSettleModal);
   document.getElementById('settleCancel').addEventListener('click', closeSettleModal);
   document.getElementById('settleSave').addEventListener('click', saveSettlement);
@@ -2251,6 +2983,10 @@ function bindEvents() {
     document.querySelectorAll('#settleDir .tutor-btn').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
   }));
+
+  // History panel inline settle (works for any month including past)
+  const histSettleBtn = document.getElementById('historySettleBtn');
+  if (histSettleBtn) histSettleBtn.addEventListener('click', () => openSettleModalForMonth(worldMonthKey));
 
   // Language toggle
   document.querySelectorAll('.lang-btn').forEach(b => b.addEventListener('click', () => {
@@ -2275,6 +3011,7 @@ function bindEvents() {
     document.getElementById('boot').classList.add('hide');
     modemDial();
     spawnAmbientParticles();
+    startBackgroundMusic();
     setTimeout(() => speakSet('idle'), 600);
     setTimeout(() => maybeShowInstallPrompt(), 1200);
   });
@@ -2288,6 +3025,8 @@ function bindEvents() {
       if (!document.getElementById('editModal').hidden) closeEditModal();
       else if (!document.getElementById('papaModal').hidden) closePapaModal();
       else if (!document.getElementById('settleModal').hidden) closeSettleModal();
+      else if (!document.getElementById('goalModal').hidden) closeGoalModal();
+      else if (!document.getElementById('savingsModal').hidden) closeSavingsModal();
       else if (document.getElementById('historyPanel').classList.contains('show')) toggleHistory();
     }
   });
@@ -2537,6 +3276,7 @@ function onRemoteExpense(payload) {
   if (!id) return;
   const echoKey = 'e:' + eventType + ':' + id;
   if (ignoreEcho.has(echoKey)) { ignoreEcho.delete(echoKey); return; }
+  let incomingSettlement = null;
   if (eventType === 'DELETE') {
     state.expenses = state.expenses.filter(e => e.id !== id);
   } else {
@@ -2544,11 +3284,20 @@ function onRemoteExpense(payload) {
     const idx = state.expenses.findIndex(e => e.id === id);
     if (idx >= 0) state.expenses[idx] = incoming;
     else state.expenses.push(incoming);
+    if (incoming.type === 'settlement' && eventType === 'INSERT') incomingSettlement = incoming;
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   rebuildConceptHints();
   refreshAfterRemote();
   flashCloud();
+  // If the partner just registered a settlement, play the ritual locally too
+  if (incomingSettlement) {
+    playSettleRitual({
+      fromTutor: incomingSettlement.fromTutor,
+      toTutor:   incomingSettlement.toTutor,
+      amount:    incomingSettlement.amount
+    });
+  }
 }
 function onRemotePapa(payload) {
   const { eventType, new: row, old: oldRow } = payload;
@@ -2709,6 +3458,7 @@ function init() {
   }
   updateSaveLabel();
   updateCloudUI('disconnected');
+  initBackgroundMusic();
 
   // Auto-connect si hay credenciales guardadas (o vinieron por URL)
   const creds = getCloudCreds();

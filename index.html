@@ -41,6 +41,7 @@
         <button class="tab active" data-view="colony" data-i18n="tab.colony">COLONIA</button>
         <button class="tab" data-view="world" data-i18n="tab.world">MUNDO</button>
         <button class="tab" data-view="stats" data-i18n="tab.stats">STATS</button>
+        <button class="tab" data-view="temple" data-i18n="tab.temple">TEMPLO</button>
         <button class="tab" data-view="settings" data-i18n="tab.settings">AJUSTES</button>
       </nav>
     </header>
@@ -54,6 +55,7 @@
         <div class="pill"><span data-i18n="hud.born">NACIDOS</span>: <span id="bornCount">0</span></div>
         <div class="pill save-indicator" id="saveIndicator">💾 <span id="saveLabel">—</span></div>
         <div class="pill cloud-pill cloud-offline" id="cloudPill" data-i18n="cloud.local">☁️ LOCAL</div>
+        <div class="pill projection-pill" id="projectionPill" hidden>📈 <span data-i18n="hud.projection">PROY</span>: <span id="projectionValue">—</span> €</div>
       </div>
 
       <!-- Papa cards are rendered dynamically by app.js -->
@@ -67,7 +69,7 @@
         <div class="balance-card">
           <div class="balance-label"><span data-i18n="deudas.balance">BALANCE</span> · <span id="balanceMode">50/50</span></div>
           <div class="balance-msg" id="balanceMsg">⚖ EN EQUILIBRIO</div>
-          <button class="settle-btn" id="settleBtn" data-i18n="deudas.settle">💸 LIQUIDAR</button>
+          <div class="balance-hint" data-i18n="deudas.settle_hint_history">liquida desde 📜 HISTÓRICO</div>
         </div>
         <div class="tutor-card gayle">
           <div class="tutor-name">GAYLE</div>
@@ -116,6 +118,7 @@
         <button id="historyBtn" data-i18n="world.history">📜</button>
       </div>
       <div class="world-stage" id="worldStage">
+        <canvas id="mandelbrotBg" aria-hidden="true"></canvas>
         <div class="world-empty" id="worldEmpty">
           <div data-i18n="world.empty">esta luna aún no ha visto Thronglets</div>
           <div class="hint-small" data-i18n="world.empty_hint">ve a la COLONIA y aliméntalos</div>
@@ -127,6 +130,7 @@
             <button id="historyClose">×</button>
           </div>
           <div class="history-totals" id="historyTotals"></div>
+          <button class="history-settle-btn" id="historySettleBtn" type="button" data-i18n="history.settle_cycle">💸 LIQUIDAR ESTE CICLO</button>
           <input type="search" id="historySearch" class="history-search" data-i18n-placeholder="history.search_placeholder" placeholder="buscar concepto...">
           <div class="history-filters" id="historyFilters"></div>
           <div class="history-list" id="historyList"></div>
@@ -191,6 +195,20 @@
       </div>
     </section>
 
+    <!-- ============ TEMPLO DEL AHORRO ============ -->
+    <section id="temple-view" class="view">
+      <div class="stats-content">
+        <h2 class="settings-title" data-i18n="temple.title">🏛 TEMPLO DEL AHORRO</h2>
+        <p class="hint-text" data-i18n="temple.hint">Metas comunes de ahorro. Cada vez que metáis dinero, los Thronglets peregrinan al templo.</p>
+
+        <div id="goalsList"></div>
+
+        <div class="settings-actions" style="text-align:left; padding: 4px 0 24px;">
+          <button class="save-btn" id="addGoalBtn" data-i18n="temple.add_goal">➕ NUEVA META</button>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ SETTINGS ============ -->
     <section id="settings-view" class="view">
       <div class="settings-content">
@@ -237,6 +255,18 @@
               <option value="party" data-i18n="chatter.party">Fiesta Throng</option>
             </select>
           </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="settings.music">🎵 MÚSICA DE FONDO</h3>
+          <p class="hint-text" data-i18n="settings.music_hint">Música ambiental Throng. Empieza al entrar a la app.</p>
+          <div class="setting-row"><span class="setting-label" data-i18n="settings.music_play">REPRODUCIR</span>
+            <label class="switch-toggle">
+              <input type="checkbox" id="musicPlaying" checked>
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+          <div class="setting-row"><span class="setting-label" data-i18n="settings.music_vol">VOL. MÚSICA</span><input type="range" id="musicVolume" min="0" max="100" value="40"><span class="setting-suffix"><span id="musicVolLabel">40</span>%</span></div>
         </div>
 
         <div class="settings-group">
@@ -395,6 +425,58 @@
   </div>
 </div>
 
+<!-- ===== GOAL MODAL (Templo del Ahorro) ===== -->
+<div class="modal-backdrop" id="goalModal" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <span id="goalModalTitle" data-i18n="goal.title">META DE AHORRO</span>
+      <button class="modal-close" id="goalClose">×</button>
+    </div>
+    <div class="modal-body">
+      <label class="modal-label" data-i18n="goal.name">Nombre de la meta</label>
+      <input type="text" id="goalName" maxlength="40" placeholder="Viaje a Japón, mudanza...">
+      <label class="modal-label" data-i18n="goal.target">Objetivo (€)</label>
+      <input type="number" id="goalTarget" min="1" step="10" inputmode="numeric" placeholder="3000">
+      <label class="modal-label" data-i18n="goal.deadline_opt">Fecha objetivo (opcional)</label>
+      <input type="date" id="goalDeadline">
+      <label class="modal-label" data-i18n="goal.emoji">Emoji / símbolo</label>
+      <input type="text" id="goalEmoji" maxlength="4" placeholder="🏖" style="font-size:24px; text-align:center;">
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn danger" id="goalDelete" hidden data-i18n="modal.delete">BORRAR</button>
+      <button class="modal-btn cancel" id="goalCancel" data-i18n="modal.cancel">CANCELAR</button>
+      <button class="modal-btn save" id="goalSave" data-i18n="modal.save">GUARDAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADD-SAVINGS MODAL ===== -->
+<div class="modal-backdrop" id="savingsModal" hidden>
+  <div class="modal">
+    <div class="modal-header">
+      <span data-i18n="savings.title">💰 AÑADIR AHORRO</span>
+      <button class="modal-close" id="savingsClose">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="hint-text" id="savingsGoalName"></p>
+      <label class="modal-label" data-i18n="savings.amount">Importe (€)</label>
+      <input type="number" id="savingsAmount" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00">
+      <label class="modal-label" data-i18n="savings.tutor">Quien aporta</label>
+      <div class="tutor-selector" id="savingsTutorSelector">
+        <button class="tutor-btn active" data-savings-tutor="Isi" type="button">ISI</button>
+        <button class="tutor-btn" data-savings-tutor="Gayle" type="button">GAYLE</button>
+        <button class="tutor-btn" data-savings-tutor="Both" type="button" data-i18n="savings.both">AMBOS</button>
+      </div>
+      <label class="modal-label" data-i18n="savings.note">Nota (opcional)</label>
+      <input type="text" id="savingsNote" maxlength="40" placeholder="paga, regalo...">
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" id="savingsCancel" data-i18n="modal.cancel">CANCELAR</button>
+      <button class="modal-btn save" id="savingsSave" data-i18n="savings.add">AÑADIR</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== SETTLEMENT MODAL ===== -->
 <div class="modal-backdrop" id="settleModal" hidden>
   <div class="modal">
@@ -423,6 +505,25 @@
   </div>
 </div>
 
+<!-- ===== SETTLE RITUAL OVERLAY ===== -->
+<div class="settle-ritual" id="settleRitual" hidden aria-hidden="true">
+  <div class="ritual-vignette"></div>
+  <div class="ritual-burst"></div>
+  <div class="ritual-rays"></div>
+  <div class="ritual-content">
+    <div class="ritual-title" data-i18n="ritual.title">LIQUIDACIÓN</div>
+    <div class="ritual-actors">
+      <div class="ritual-tutor" id="ritualFrom">GAYLE</div>
+      <div class="ritual-arrow">→</div>
+      <div class="ritual-tutor" id="ritualTo">ISI</div>
+    </div>
+    <div class="ritual-amount" id="ritualAmount">0,00 €</div>
+    <div class="ritual-tagline" data-i18n="ritual.tagline">EL CICLO SE CIERRA</div>
+  </div>
+  <div class="ritual-coins" id="ritualCoins" aria-hidden="true"></div>
+</div>
+
+<audio id="bgMusic" loop preload="auto"></audio>
 <script src="app.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
