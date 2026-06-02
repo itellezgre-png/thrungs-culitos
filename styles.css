@@ -764,6 +764,42 @@ h1 {
 .history-totals .total-pill { color: #fff66d; }
 .history-totals .total-pill .lbl { display: block; font-family: 'Press Start 2P', monospace; font-size: 8px; color: #c89cff; margin-bottom: 2px; }
 
+/* Cycle balance status row (just above the settle button in History) */
+.history-cycle-status {
+  margin: 6px 14px 0;
+  padding: 8px 12px;
+  border: 1px dashed currentColor;
+  background: rgba(0,0,0,0.35);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  text-align: center;
+}
+.history-cycle-status.balanced { color: #7df9aa; }
+.history-cycle-status.unbalanced {
+  color: #fff66d;
+  background: rgba(255,246,109,0.06);
+  animation: cycleStatusPulse 2s ease-in-out infinite;
+}
+@keyframes cycleStatusPulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(255,246,109,0); }
+  50% { box-shadow: 0 0 14px rgba(255,246,109,0.3); }
+}
+.history-cycle-status .cs-label { opacity: 0.85; }
+.history-cycle-status .cs-arrow { font-family: 'VT323', monospace; font-size: 14px; letter-spacing: 1px; color: #c89cff; }
+.history-cycle-status .cs-amount {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: #fff66d;
+  text-shadow: 0 0 8px rgba(255,246,109,0.6);
+  letter-spacing: 0;
+}
+
 .history-settle-btn {
   margin: 6px 14px 10px;
   padding: 10px 12px;
@@ -797,6 +833,51 @@ h1 {
   color: #0a0014;
   box-shadow: 0 0 22px rgba(255,246,109,0.6), 3px 3px 0 #c89cff;
   transform: translate(-1px, -1px);
+}
+.history-settle-btn.balanced {
+  color: #7df9aa;
+  border-color: #7df9aa;
+  background: rgba(125,249,170,0.06);
+  box-shadow: 0 0 12px rgba(125,249,170,0.2), 3px 3px 0 rgba(125,249,170,0.4);
+}
+.history-settle-btn.balanced:hover, .history-settle-btn.balanced:active {
+  background: #7df9aa;
+  color: #0a0014;
+}
+
+/* Balance line inside the Settle modal */
+.settle-balance-line {
+  margin: 4px 0 8px;
+  padding: 10px 12px;
+  border: 1px solid currentColor;
+  background: rgba(0,0,0,0.35);
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
+}
+.settle-balance-line.balanced { color: #7df9aa; }
+.settle-balance-line.unbalanced { color: #fff66d; background: rgba(255,246,109,0.05); }
+.settle-balance-line .bal-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  color: #c89cff;
+  opacity: 0.85;
+}
+.settle-balance-line .bal-msg {
+  font-size: 18px;
+  font-weight: bold;
+  text-shadow: 0 0 6px currentColor;
+}
+.settle-balance-line .bal-hint {
+  font-size: 12px;
+  opacity: 0.65;
+  color: #c89cff;
+  font-style: italic;
 }
 .history-search {
   background: #0a0014; border: none; border-bottom: 1px solid #c89cff;

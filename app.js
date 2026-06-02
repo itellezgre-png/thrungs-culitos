@@ -142,6 +142,10 @@ const LOCALES = {
     'history.total_isi': 'ISI', 'history.total_gayle': 'GAYLE', 'history.total_all': 'TOTAL',
     'history.settle_cycle': '💸 LIQUIDAR ESTE CICLO',
     'history.settle_cycle_done': '✓ CICLO LIQUIDADO',
+    'history.cycle_balanced': '⚖ CICLO EN EQUILIBRIO',
+    'history.cycle_debt': '⚠ DEUDA DEL CICLO',
+    'settle.balance_for': 'Balance de {month}:',
+    'settle.prefilled_hint': '(ya rellenado, edítalo si quieres)',
     'stats.title': 'ANÁLISIS THRONG', 'stats.accumulated': 'ACUMULADO', 'stats.since_dawn': 'desde el inicio de los tiempos',
     'stats.monthly_avg': 'MEDIA MENSUAL', 'stats.period': '— período —',
     'stats.last_n_months': 'últimos {n} meses (con recurrentes)',
@@ -323,6 +327,10 @@ const LOCALES = {
     'history.total_isi': 'ISI', 'history.total_gayle': 'GAYLE', 'history.total_all': 'TOTAL',
     'history.settle_cycle': '💸 SETTLE THIS CYCLE',
     'history.settle_cycle_done': '✓ CYCLE SETTLED',
+    'history.cycle_balanced': '⚖ CYCLE BALANCED',
+    'history.cycle_debt': '⚠ CYCLE DEBT',
+    'settle.balance_for': '{month} balance:',
+    'settle.prefilled_hint': '(pre-filled, edit if you want)',
     'stats.title': 'THRONG ANALYTICS', 'stats.accumulated': 'TOTAL', 'stats.since_dawn': 'since the dawn of time',
     'stats.monthly_avg': 'MONTHLY AVG', 'stats.period': '— period —',
     'stats.last_n_months': 'last {n} months (incl. recurring)',
@@ -1066,63 +1074,55 @@ function renderColony() {
   renderProjection();
 }
 
-function renderDeudas() {
-  /* Per-expense split-aware balance:
-     For each expense:
-       paid[tutor] += amount
-       owed[tutor] += amount * split[tutor]
-     For each settlement (Gayle→Isi reduces Gayle's debt to Isi by amount; symmetric):
-       owed/paid adjusted via transfer
-     Final: isiNet = isiPaid - isiOwed + settlements_received_by_isi - settlements_paid_by_isi
-            isiNet > 0 → Gayle owes Isi |isiNet| (50/50 model uses this directly)
-            'difference' model: shows the gross difference |isiPaid-gaylePaid| using current month tutorPaid (no splits)
-  */
-  const month = monthKey(new Date());
-  const monthly = expensesForMonth(month);
-  const settlements = settlementsForMonth(month);
-
-  // Per-tutor PAID totals (for display)
+/* Reusable: compute split-aware balance for a given month.
+   Returns { isiPaid, gaylePaid, isiNet, debtAmt, owesFrom, owesTo, balanced }
+   - isiNet > 0 → Gayle owes Isi |isiNet|
+   - 'difference' mode returns |isiPaid-gaylePaid| as debtAmt
+*/
+function computeMonthBalance(mKey) {
+  const monthly = expensesForMonth(mKey);
+  const settlements = settlementsForMonth(mKey);
   let isiPaid = 0, gaylePaid = 0;
   for (const e of monthly) {
     if (e.tutor === 'Isi') isiPaid += e.amount;
     else gaylePaid += e.amount;
   }
-
-  // Split-aware net
-  let isiOwed = 0, gayleOwed = 0;
+  let isiOwed = 0;
   for (const e of monthly) {
     const sp = e.split || { isi: 0.5, gayle: 0.5 };
-    isiOwed   += e.amount * (sp.isi   ?? 0.5);
-    gayleOwed += e.amount * (sp.gayle ?? 0.5);
+    isiOwed += e.amount * (sp.isi ?? 0.5);
   }
-  let isiNet = isiPaid - isiOwed;  // positive: Gayle owes Isi this much
-
-  // Apply settlements
-  // settlement: from→to. If "Gayle paid Isi X" → reduces Gayle's debt by X → isiNet -= X
+  let isiNet = isiPaid - isiOwed;
   for (const s of settlements) {
     if (s.fromTutor === 'Gayle' && s.toTutor === 'Isi') isiNet -= s.amount;
     if (s.fromTutor === 'Isi' && s.toTutor === 'Gayle') isiNet += s.amount;
   }
+  const model = state.settings.splitModel;
+  const debtAmt = model === 'half' ? Math.abs(isiNet) : Math.abs(isiPaid - gaylePaid);
+  const balanced = debtAmt < 0.01;
+  let owesFrom = null, owesTo = null;
+  if (!balanced) {
+    const gayleOwes = (model === 'half') ? (isiNet > 0) : (isiPaid > gaylePaid);
+    owesFrom = gayleOwes ? 'Gayle' : 'Isi';
+    owesTo   = gayleOwes ? 'Isi'   : 'Gayle';
+  }
+  return { isiPaid, gaylePaid, isiNet, debtAmt, owesFrom, owesTo, balanced, model };
+}
 
-  document.getElementById('isiTotal').textContent = fmt(isiPaid);
-  document.getElementById('gayleTotal').textContent = fmt(gaylePaid);
+function renderDeudas() {
+  const bal = computeMonthBalance(monthKey(new Date()));
+  document.getElementById('isiTotal').textContent = fmt(bal.isiPaid);
+  document.getElementById('gayleTotal').textContent = fmt(bal.gaylePaid);
+  document.getElementById('balanceMode').textContent =
+    bal.model === 'half' ? t('deudas.by_split') : t('deudas.gross');
 
   const msg = document.getElementById('balanceMsg');
   const card = document.querySelector('.balance-card');
-  let debtAmt;
-  if (state.settings.splitModel === 'half') {
-    debtAmt = Math.abs(isiNet);
-    document.getElementById('balanceMode').textContent = t('deudas.by_split');
+  if (bal.balanced) {
+    msg.textContent = t('deudas.balanced');
+    card.classList.remove('unbalanced');
   } else {
-    debtAmt = Math.abs(isiPaid - gaylePaid);
-    document.getElementById('balanceMode').textContent = t('deudas.gross');
-  }
-  if (debtAmt < 0.01) { msg.textContent = t('deudas.balanced'); card.classList.remove('unbalanced'); }
-  else if ((state.settings.splitModel === 'half' && isiNet > 0) || (state.settings.splitModel !== 'half' && isiPaid > gaylePaid)) {
-    msg.textContent = t('deudas.owes', { from: 'Gayle', to: 'Isi', amount: fmt(debtAmt) });
-    card.classList.add('unbalanced');
-  } else {
-    msg.textContent = t('deudas.owes', { from: 'Isi', to: 'Gayle', amount: fmt(debtAmt) });
+    msg.textContent = t('deudas.owes', { from: bal.owesFrom, to: bal.owesTo, amount: fmt(bal.debtAmt) });
     card.classList.add('unbalanced');
   }
 }
@@ -1699,13 +1699,40 @@ function renderMandelbrotBackground() {
 function refreshHistorySettleBtn() {
   const btn = document.getElementById('historySettleBtn');
   if (!btn) return;
+  const bal = computeMonthBalance(worldMonthKey);
   const settles = settlementsForMonth(worldMonthKey);
-  if (settles.length > 0) {
-    btn.textContent = t('history.settle_cycle_done') + ' · ' + t('history.settle_cycle').replace('💸 ', '+ ');
-    btn.style.opacity = '0.85';
+
+  // Build a "BALANCE DEL CICLO" status row that lives just above the button
+  let statusEl = document.getElementById('historyCycleStatus');
+  if (!statusEl) {
+    statusEl = document.createElement('div');
+    statusEl.id = 'historyCycleStatus';
+    statusEl.className = 'history-cycle-status';
+    btn.parentNode.insertBefore(statusEl, btn);
+  }
+  if (bal.balanced) {
+    statusEl.className = 'history-cycle-status balanced';
+    statusEl.innerHTML = `<span class="cs-label">${t('history.cycle_balanced')}</span>`;
   } else {
-    btn.textContent = t('history.settle_cycle');
-    btn.style.opacity = '1';
+    statusEl.className = 'history-cycle-status unbalanced';
+    statusEl.innerHTML = `
+      <span class="cs-label">${t('history.cycle_debt')}</span>
+      <span class="cs-arrow">${bal.owesFrom} → ${bal.owesTo}</span>
+      <span class="cs-amount">${fmt(bal.debtAmt)} €</span>`;
+  }
+
+  // Button label
+  if (bal.balanced) {
+    // Already even — show neutral state (allow extra settle anyway)
+    btn.textContent = (settles.length > 0
+      ? t('history.settle_cycle_done')
+      : t('history.settle_cycle'));
+    btn.classList.add('balanced');
+    btn.classList.remove('has-debt');
+  } else {
+    btn.textContent = `${t('history.settle_cycle')} · ${fmt(bal.debtAmt)} €`;
+    btn.classList.add('has-debt');
+    btn.classList.remove('balanced');
   }
 }
 
@@ -2256,21 +2283,70 @@ function lastDayOfMonthYMD(mKey) {
   const lastDay = new Date(y, m, 0).getDate();
   return mKey + '-' + String(lastDay).padStart(2, '0');
 }
-function openSettleModal(prefilledDate) {
-  document.getElementById('settleAmount').value = '';
-  document.getElementById('settleNote').value = '';
-  // If a specific date is passed (from history panel), use it; otherwise today
-  document.getElementById('settleDate').value = prefilledDate || todayYMD();
-  document.querySelectorAll('#settleDir .tutor-btn').forEach(b => b.classList.toggle('active', b.dataset.settle === settleDir));
+function openSettleModal(opts) {
+  opts = opts || {};
+  const amountInput = document.getElementById('settleAmount');
+  const dateInput = document.getElementById('settleDate');
+  const noteInput = document.getElementById('settleNote');
+  const balLine = document.getElementById('settleBalanceLine');
+
+  amountInput.value = opts.prefilledAmount && opts.prefilledAmount > 0
+    ? opts.prefilledAmount.toFixed(2)
+    : '';
+  noteInput.value = '';
+  dateInput.value = opts.prefilledDate || todayYMD();
+
+  // Direction: opts.prefilledDir overrides; otherwise leave last selected
+  if (opts.prefilledDir) settleDir = opts.prefilledDir;
+  document.querySelectorAll('#settleDir .tutor-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.settle === settleDir)
+  );
+
+  // Balance info banner inside the modal
+  if (balLine) {
+    if (opts.balanceInfo) {
+      balLine.hidden = false;
+      balLine.className = 'settle-balance-line ' + (opts.balanceInfo.balanced ? 'balanced' : 'unbalanced');
+      balLine.innerHTML = opts.balanceInfo.html;
+    } else {
+      balLine.hidden = true;
+      balLine.innerHTML = '';
+    }
+  }
+
   document.getElementById('settleModal').hidden = false;
-  setTimeout(() => document.getElementById('settleAmount').focus(), 50);
+  setTimeout(() => amountInput.focus(), 50);
   beep(900);
 }
 function openSettleModalForMonth(mKey) {
-  // Pre-fills date to last day of the given month (so the settlement lives in that world)
+  const bal = computeMonthBalance(mKey);
   const sameMonth = (mKey === monthKey(new Date()));
   const date = sameMonth ? todayYMD() : lastDayOfMonthYMD(mKey);
-  openSettleModal(date);
+  const monthName = monthLabel(mKey);
+  let balanceInfo;
+  if (bal.balanced) {
+    balanceInfo = {
+      balanced: true,
+      html: `<span class="bal-label">${t('settle.balance_for', { month: monthName })}</span>
+             <span class="bal-msg">${t('deudas.balanced')}</span>`
+    };
+  } else {
+    const dirKey = (bal.owesFrom === 'Gayle') ? 'gayle-to-isi' : 'isi-to-gayle';
+    balanceInfo = {
+      balanced: false,
+      html: `<span class="bal-label">${t('settle.balance_for', { month: monthName })}</span>
+             <span class="bal-msg">${t('deudas.owes', { from: bal.owesFrom, to: bal.owesTo, amount: fmt(bal.debtAmt) })}</span>
+             <span class="bal-hint">${t('settle.prefilled_hint')}</span>`
+    };
+    openSettleModal({
+      prefilledDate: date,
+      prefilledAmount: bal.debtAmt,
+      prefilledDir: dirKey,
+      balanceInfo
+    });
+    return;
+  }
+  openSettleModal({ prefilledDate: date, balanceInfo });
 }
 function closeSettleModal() { document.getElementById('settleModal').hidden = true; }
 function saveSettlement() {
