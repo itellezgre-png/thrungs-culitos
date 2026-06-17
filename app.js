@@ -127,6 +127,20 @@ const LOCALES = {
     'deudas.settle_hint_history': 'liquida desde 📜 HISTÓRICO',
     'ritual.title': 'LIQUIDACIÓN',
     'ritual.tagline': 'EL CICLO SE CIERRA',
+    'celeb.title': '¡META ALCANZADA!',
+    'month_end.eyebrow': 'CICLO CERRADO',
+    'month_end.tagline': 'EL THRONG RECUERDA',
+    'month_end.continue': 'CONTINUAR',
+    'month_end.spent': 'GASTADO',
+    'month_end.thronglets': 'THRONGS NACIDOS',
+    'month_end.balance': 'BALANCE',
+    'month_end.balanced': 'EN EQUILIBRIO',
+    'cycles.title': 'CICLOS HISTÓRICOS',
+    'cycles.balanced': '⚖ EQUILIBRADO',
+    'cycles.settled': '✓ LIQUIDADO',
+    'cycles.pending': '⚠ PENDIENTE',
+    'cycles.overpaid': 'SOBREPAGADO',
+    'cycles.no_expenses': '— sin gastos —',
     'feed.papa': 'PAPA', 'feed.tutor': 'TUTOR', 'feed.amount': '€', 'feed.date': 'FECHA', 'feed.split': 'REPARTO', 'feed.feed': 'ALIMENTAR',
     'feed.sheet_title': 'NUEVO GASTO',
     'feed.concept_placeholder': 'concepto (cena indio, netflix...)',
@@ -312,6 +326,20 @@ const LOCALES = {
     'deudas.settle_hint_history': 'settle from 📜 HISTORY',
     'ritual.title': 'SETTLEMENT',
     'ritual.tagline': 'THE CYCLE CLOSES',
+    'celeb.title': 'GOAL REACHED!',
+    'month_end.eyebrow': 'CYCLE CLOSED',
+    'month_end.tagline': 'THE THRONG REMEMBERS',
+    'month_end.continue': 'CONTINUE',
+    'month_end.spent': 'SPENT',
+    'month_end.thronglets': 'THRONGS BORN',
+    'month_end.balance': 'BALANCE',
+    'month_end.balanced': 'BALANCED',
+    'cycles.title': 'HISTORICAL CYCLES',
+    'cycles.balanced': '⚖ BALANCED',
+    'cycles.settled': '✓ SETTLED',
+    'cycles.pending': '⚠ PENDING',
+    'cycles.overpaid': 'OVERPAID',
+    'cycles.no_expenses': '— no expenses —',
     'feed.papa': 'PAPA', 'feed.tutor': 'TUTOR', 'feed.amount': '€', 'feed.date': 'DATE', 'feed.split': 'SPLIT', 'feed.feed': 'FEED',
     'feed.sheet_title': 'NEW EXPENSE',
     'feed.concept_placeholder': 'description (taco tuesday, netflix...)',
@@ -1925,6 +1953,46 @@ function renderStats() {
     const d = new Date(e.timestamp);
     return `<div class="top-row ${p?.cls || ''}"><span class="top-rank">#${i+1}</span><span class="top-name">${e.name}</span><span class="top-meta">${e.tutor} · ${monthLabel(monthKey(d))}</span><span class="top-amount">${fmt(e.amount)} €</span></div>`;
   }).join('');
+
+  renderCyclesSection(monthKeysOrdered);
+}
+
+/* Cycles section: per-month status (balanced / settled / pending / overpaid) */
+function renderCyclesSection(monthKeys) {
+  const el = document.getElementById('cyclesList');
+  if (!el) return;
+  if (!monthKeys || monthKeys.length === 0) {
+    el.innerHTML = `<div class="chart-empty">${t('stats.no_data')}</div>`;
+    return;
+  }
+  // Most-recent first
+  const ordered = [...monthKeys].reverse();
+  el.innerHTML = ordered.map(mKey => {
+    const bal = computeMonthBalance(mKey);
+    const settles = settlementsForMonth(mKey);
+    const monthExp = expensesForMonth(mKey);
+    if (monthExp.length === 0 && settles.length === 0) {
+      return `<div class="cycle-row"><span class="cy-month">${monthLabel(mKey)}</span><span class="cy-msg">${t('cycles.no_expenses')}</span><span class="cy-status">—</span></div>`;
+    }
+    let cls, statusKey, msg;
+    if (bal.balanced) {
+      cls = settles.length > 0 ? 'settled' : 'balanced';
+      statusKey = settles.length > 0 ? 'cycles.settled' : 'cycles.balanced';
+      msg = settles.length > 0
+        ? `${settles.length} liquidación${settles.length > 1 ? 'es' : ''}`
+        : t('deudas.balanced');
+    } else {
+      cls = 'pending';
+      statusKey = 'cycles.pending';
+      msg = `${bal.owesFrom} → ${bal.owesTo} · <span class="cy-amount">${fmt(bal.debtAmt)} €</span>`;
+    }
+    return `
+      <div class="cycle-row ${cls}">
+        <span class="cy-month">${monthLabel(mKey)}</span>
+        <span class="cy-msg">${msg}</span>
+        <span class="cy-status">${t(statusKey)}</span>
+      </div>`;
+  }).join('');
 }
 
 /* ============================================
@@ -2041,6 +2109,7 @@ function openPapaModal(papaId = null) {
     const opt = document.createElement('div');
     opt.className = 'sprite-option' + (s.key === papaSelectedSprite ? ' selected' : '');
     opt.title = s.label;
+    opt.style.setProperty('--sprite-preview', `url("${s.file}")`);
     opt.innerHTML = `<img src="${s.file}" alt="">`;
     opt.addEventListener('click', () => {
       papaSelectedSprite = s.key;
@@ -2271,6 +2340,181 @@ function playSettleRitual({ fromTutor, toTutor, amount }) {
     if (wrap) wrap.innerHTML = '';
     ritualBusy = false;
   }, 2700);
+}
+
+
+/* ============================================
+   15c. GOAL CELEBRATION + MONTH-END RITUAL
+   ─────────────────────────────────────────────
+   - Goal celebration: confetti burst when a saving
+     goal reaches 100%.
+   - Month-end ritual: when the user opens the app
+     in a new month (vs last_visited_month stored
+     in settings), show a recap cutscene of the
+     previous cycle (total spent, throngs born,
+     balance/settle status).
+   ============================================ */
+const CONFETTI_COLORS = ['#ff6ec7', '#7df9aa', '#c89cff', '#fff66d', '#66ddff', '#ff8866'];
+let goalCelebBusy = false;
+
+function spawnConfetti(count = 60) {
+  const wrap = document.getElementById('confettiWrap');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  const W = window.innerWidth;
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti';
+    const startX = Math.random() * W;
+    const endX = startX + (Math.random() - 0.5) * 200;
+    const fallY = window.innerHeight + 60;
+    const rot = (Math.random() * 720) - 360;
+    const dur = 1800 + Math.random() * 1400;
+    const delay = Math.random() * 600;
+    piece.style.left = startX + 'px';
+    piece.style.color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+    piece.style.transform = `translateY(-30px) rotate(0deg)`;
+    piece.style.transition = `transform ${dur}ms cubic-bezier(0.2, 0.6, 0.4, 1) ${delay}ms, opacity 0.4s ease ${delay + dur - 400}ms`;
+    wrap.appendChild(piece);
+    requestAnimationFrame(() => {
+      piece.style.transform = `translate(${endX - startX}px, ${fallY}px) rotate(${rot}deg)`;
+      piece.style.opacity = '0';
+    });
+  }
+}
+
+function celebrationSound() {
+  let ctx;
+  try { ctx = ensureAudio(); } catch (e) { return; }
+  const t0 = ctx.currentTime;
+  // Triumphant arpeggio: C major in two octaves
+  const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98];
+  notes.forEach((f, i) => {
+    try {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      osc.connect(g).connect(out());
+      const start = t0 + i * 0.08;
+      env(g, start, 0.005, 0.08, 0.5, 0.25, 0.18);
+      osc.start(start); osc.stop(start + 0.35);
+    } catch (e) {}
+  });
+  // Final chord
+  setTimeout(() => {
+    try {
+      const ctx2 = ensureAudio();
+      const tx = ctx2.currentTime;
+      [523.25, 659.25, 783.99, 1046.50].forEach(f => {
+        const osc = ctx2.createOscillator();
+        const g = ctx2.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = f;
+        osc.connect(g).connect(out());
+        env(g, tx, 0.005, 0.3, 0.5, 0.6, 0.15);
+        osc.start(tx); osc.stop(tx + 1.0);
+      });
+    } catch (e) {}
+  }, 600);
+}
+
+function showGoalCelebration(goal) {
+  if (goalCelebBusy) return;
+  const overlay = document.getElementById('goalCelebration');
+  if (!overlay) return;
+  goalCelebBusy = true;
+  document.getElementById('celebEmoji').textContent = goal.emoji || '🎉';
+  document.getElementById('celebName').textContent = `«${goal.name}»`;
+  document.getElementById('celebAmount').textContent = fmt(goal.target) + ' €';
+  overlay.hidden = false;
+  overlay.querySelectorAll('.celeb-vignette, .celeb-content, .celeb-emoji')
+    .forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
+  spawnConfetti(70);
+  celebrationSound();
+  clearTimeout(showGoalCelebration._t);
+  showGoalCelebration._t = setTimeout(() => {
+    overlay.hidden = true;
+    const wrap = document.getElementById('confettiWrap');
+    if (wrap) wrap.innerHTML = '';
+    goalCelebBusy = false;
+  }, 2500);
+}
+
+/* === MONTH-END RITUAL === */
+function getLastVisitedMonth() {
+  return state.settings?.lastVisitedMonth || null;
+}
+function setLastVisitedMonth(mKey) {
+  state.settings = state.settings || {};
+  state.settings.lastVisitedMonth = mKey;
+  save();
+  // Cloud-sync this single setting if connected
+  if (typeof cloudPushSettings === 'function') cloudPushSettings();
+}
+
+function maybeShowMonthEndRitual() {
+  // Compare current month vs last visited; if different (skipping null/first run),
+  // show recap of the previous month.
+  const current = monthKey(new Date());
+  const last = getLastVisitedMonth();
+  setLastVisitedMonth(current);
+  if (!last) return;            // first run, nothing to recap
+  if (last === current) return; // same month, no transition
+  // Sanity: only recap if the user has been away ≤ 6 months (otherwise pointless)
+  const monthsAway = (() => {
+    let count = 0; let m = last;
+    while (m !== current && count < 12) { m = shiftMonth(m, +1); count++; }
+    return count;
+  })();
+  if (monthsAway === 0 || monthsAway > 6) return;
+  showMonthEndRitual(last);
+}
+
+function showMonthEndRitual(mKey) {
+  const overlay = document.getElementById('monthEndRitual');
+  if (!overlay) return;
+  const titleEl = document.getElementById('monthEndTitle');
+  const statsEl = document.getElementById('monthEndStats');
+  if (titleEl) titleEl.textContent = monthLabel(mKey);
+
+  // Compute recap stats
+  const expenses = expensesForMonth(mKey);
+  const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
+  const throngsBorn = expenses.length;
+  const bal = computeMonthBalance(mKey);
+
+  // Build stats grid
+  const balCls = bal.balanced ? 'balanced' : 'unbalanced';
+  const balValue = bal.balanced
+    ? t('month_end.balanced')
+    : `${bal.owesFrom} → ${bal.owesTo}<br>${fmt(bal.debtAmt)} €`;
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <div class="me-stat">
+        <div class="label">${t('month_end.spent')}</div>
+        <div class="value">${fmt(totalSpent)} €</div>
+      </div>
+      <div class="me-stat">
+        <div class="label">${t('month_end.thronglets')}</div>
+        <div class="value">${throngsBorn}</div>
+      </div>
+      <div class="me-stat balance ${balCls}">
+        <div class="label">${t('month_end.balance')}</div>
+        <div class="value">${balValue}</div>
+      </div>
+    `;
+  }
+
+  overlay.hidden = false;
+  // Soft modem-dial as opening sound
+  try { modemDial(); } catch (e) {}
+}
+
+function closeMonthEndRitual() {
+  const overlay = document.getElementById('monthEndRitual');
+  if (overlay) overlay.hidden = true;
+  beep(900);
 }
 
 
@@ -2618,19 +2862,23 @@ function saveGoal() {
   const emoji = document.getElementById('goalEmoji').value.trim() || '🏖';
   if (!name || isNaN(target) || target <= 0) { alert(t('alert.invalid_data')); return; }
   const goals = getGoals();
+  let updatedGoal;
   if (editingGoalId) {
     const g = goals.find(x => x.id === editingGoalId);
     if (!g) return;
     g.name = name; g.target = target; g.deadline = deadline; g.emoji = emoji;
+    updatedGoal = g;
   } else {
-    goals.push({
+    updatedGoal = {
       id: 'g' + Date.now() + Math.random().toString(36).slice(2,6),
       name, target, deadline, emoji,
       createdAt: Date.now(),
       contributions: []
-    });
+    };
+    goals.push(updatedGoal);
   }
   save();
+  cloudPushGoal(updatedGoal);
   closeGoalModal();
   buildTempleView();
   chime();
@@ -2639,8 +2887,10 @@ function saveGoal() {
 function deleteGoal() {
   if (!editingGoalId) return;
   if (!confirm(t('confirm.delete_goal'))) return;
-  state.goals = getGoals().filter(g => g.id !== editingGoalId);
+  const deletedId = editingGoalId;
+  state.goals = getGoals().filter(g => g.id !== deletedId);
   save();
+  cloudDeleteGoal(deletedId);
   closeGoalModal();
   buildTempleView();
   alertCry();
@@ -2672,18 +2922,21 @@ function saveSavings() {
     amount, tutor: savingsTutor, note, timestamp: Date.now()
   });
   save();
+  cloudPushGoal && cloudPushGoal(g);
   closeSavingsModal();
   buildTempleView();
-  // Mini celebration
-  chime();
-  setTimeout(chime, 200);
   // Check if just completed
-  const totalSaved = g.contributions.reduce((s, c) => s + c.amount, 0);
-  if (totalSaved >= g.target) {
-    setTimeout(() => { chime(); setTimeout(chime, 150); setTimeout(chime, 350); }, 400);
+  const totalSavedBefore = g.contributions.slice(0, -1).reduce((s, c) => s + c.amount, 0);
+  const totalSaved = totalSavedBefore + amount;
+  const justReached = (totalSavedBefore < g.target) && (totalSaved >= g.target);
+  if (justReached) {
+    // Full epic celebration overlay
+    showGoalCelebration(g);
     speak('KRII-MOK!', t('speak.goal_completed', { name: g.name }));
   } else {
-    const remaining = g.target - totalSaved;
+    chime();
+    setTimeout(chime, 200);
+    const remaining = Math.max(0, g.target - totalSaved);
     speak('PLOK!', t('speak.goal_progress', { remaining: fmt(remaining), name: g.name }));
   }
 }
@@ -2889,8 +3142,39 @@ async function pushAllLocalToCloud() {
 }
 
 /* ============================================
-   19. AUTOCOMPLETE (concepto)
+   19. AUTOCOMPLETE (concepto) + AUTO-SUGGEST PAPA
    ============================================ */
+/* When the user types a concepto, scan history for the same name and
+   auto-select its most-recent Papa. Subtle pulse on the suggested btn. */
+function autoSuggestPapa(rawConcept) {
+  if (!rawConcept) return;
+  const q = rawConcept.trim().toLowerCase();
+  if (q.length < 3) return;
+  // Exact match first, then substring; preferring the most recent
+  const candidates = state.expenses
+    .filter(e => e.type === 'expense' && e.papaId && e.name)
+    .filter(e => {
+      const n = e.name.toLowerCase();
+      return n === q || n.includes(q);
+    })
+    .sort((a, b) => {
+      // exact match wins
+      const aExact = a.name.toLowerCase() === q ? 1 : 0;
+      const bExact = b.name.toLowerCase() === q ? 1 : 0;
+      if (aExact !== bExact) return bExact - aExact;
+      return b.timestamp - a.timestamp;
+    });
+  const pick = candidates[0];
+  if (!pick || !getPapaById(pick.papaId)) return;
+  if (selectedPapa === pick.papaId) return; // already selected, no flash needed
+  selectPapaUI(pick.papaId);
+  const btn = document.querySelector(`.papa-btn[data-papa="${pick.papaId}"]`);
+  if (btn) {
+    btn.classList.add('auto-suggested');
+    setTimeout(() => btn.classList.remove('auto-suggested'), 1200);
+  }
+}
+
 function rebuildConceptHints() {
   const list = document.getElementById('conceptHints');
   if (!list) return;
@@ -2972,7 +3256,14 @@ function bindEvents() {
   document.getElementById('splitSelect').addEventListener('change', (e) => { selectedSplit = e.target.value; beep(900); });
 
   document.getElementById('feedBtn').addEventListener('click', feed);
-  document.getElementById('concepto').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('amount').focus(); });
+  const conceptoEl = document.getElementById('concepto');
+  conceptoEl.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('amount').focus(); });
+  // Auto-suggest papa as user types (debounced via input rate-limit)
+  let suggestTimer = null;
+  conceptoEl.addEventListener('input', e => {
+    clearTimeout(suggestTimer);
+    suggestTimer = setTimeout(() => autoSuggestPapa(e.target.value), 220);
+  });
   document.getElementById('amount').addEventListener('keydown', e => { if (e.key === 'Enter') feed(); });
 
   document.getElementById('prevMonth').addEventListener('click', () => { worldMonthKey = shiftMonth(worldMonthKey, -1); renderWorld(); beep(700); });
@@ -3089,7 +3380,17 @@ function bindEvents() {
     spawnAmbientParticles();
     startBackgroundMusic();
     setTimeout(() => speakSet('idle'), 600);
-    setTimeout(() => maybeShowInstallPrompt(), 1200);
+    setTimeout(() => maybeShowMonthEndRitual(), 900);
+    setTimeout(() => maybeShowInstallPrompt(), 1800);
+  });
+
+  // Month-end ritual dismiss (also closes on click anywhere on the overlay)
+  const meDismiss = document.getElementById('monthEndDismiss');
+  if (meDismiss) meDismiss.addEventListener('click', closeMonthEndRitual);
+  const meOverlay = document.getElementById('monthEndRitual');
+  if (meOverlay) meOverlay.addEventListener('click', (e) => {
+    // Don't close when clicking on the inner content (let buttons handle it)
+    if (e.target === meOverlay) closeMonthEndRitual();
   });
 
   window.addEventListener('resize', () => {
@@ -3229,6 +3530,26 @@ function papaToRow(p, idx) {
 function rowToPapa(r) {
   return { id: r.id, name: r.name, cls: r.cls, budget: parseFloat(r.budget), sprite: r.sprite };
 }
+function goalToRow(g) {
+  const { household } = getCloudCreds();
+  return {
+    id: g.id, household_id: household,
+    name: g.name, target: g.target, deadline: g.deadline || null,
+    emoji: g.emoji || null, created_at: g.createdAt || Date.now(),
+    contributions: g.contributions || [],
+    updated_at: new Date().toISOString()
+  };
+}
+function rowToGoal(r) {
+  return {
+    id: r.id, name: r.name,
+    target: parseFloat(r.target),
+    deadline: r.deadline || null,
+    emoji: r.emoji || '🏖',
+    createdAt: parseInt(r.created_at, 10) || Date.now(),
+    contributions: Array.isArray(r.contributions) ? r.contributions : []
+  };
+}
 function settingsRowOut() {
   const { household } = getCloudCreds();
   return {
@@ -3236,11 +3557,17 @@ function settingsRowOut() {
     split_model: state.settings.splitModel,
     master_volume: state.settings.masterVolume,
     world_chatter: state.settings.worldChatter,
+    last_visited_month: state.settings.lastVisitedMonth || null,
     updated_at: new Date().toISOString()
   };
 }
 function settingsRowIn(r) {
-  return { splitModel: r.split_model, masterVolume: parseFloat(r.master_volume), worldChatter: r.world_chatter };
+  return {
+    splitModel: r.split_model,
+    masterVolume: parseFloat(r.master_volume),
+    worldChatter: r.world_chatter,
+    lastVisitedMonth: r.last_visited_month || null
+  };
 }
 
 /* === Connect / Disconnect === */
@@ -3289,10 +3616,13 @@ async function mergeWithCloud() {
   if (!supabaseClient) return;
   const { household } = getCloudCreds();
   if (!household) return;
-  const [expRes, papasRes, settingsRes] = await Promise.all([
+  // Goals table may not exist yet if user hasn't run the v2 migration — request gracefully
+  const [expRes, papasRes, settingsRes, goalsRes] = await Promise.all([
     supabaseClient.from('expenses').select('*').eq('household_id', household),
     supabaseClient.from('papas').select('*').eq('household_id', household).order('position'),
-    supabaseClient.from('app_settings').select('*').eq('household_id', household).maybeSingle()
+    supabaseClient.from('app_settings').select('*').eq('household_id', household).maybeSingle(),
+    supabaseClient.from('goals').select('*').eq('household_id', household)
+      .then(r => r, err => ({ data: null, error: err }))
   ]);
   if (expRes.error) throw expRes.error;
   if (papasRes.error) throw papasRes.error;
@@ -3312,6 +3642,20 @@ async function mergeWithCloud() {
   }
   if (settingsRes.data) state.settings = Object.assign({}, state.settings, settingsRowIn(settingsRes.data));
 
+  // Goals merge (only if the table exists / migration was run)
+  let goalsAvailable = false;
+  let localOnlyGoals = [];
+  if (goalsRes && !goalsRes.error) {
+    goalsAvailable = true;
+    const cloudGoals = (goalsRes.data || []).map(rowToGoal);
+    if (!Array.isArray(state.goals)) state.goals = [];
+    const cloudGoalIds = new Set(cloudGoals.map(g => g.id));
+    localOnlyGoals = state.goals.filter(g => !cloudGoalIds.has(g.id));
+    state.goals = [...cloudGoals, ...localOnlyGoals];
+  } else if (goalsRes && goalsRes.error) {
+    console.info('Goals table not available — run supabase-schema-v2.sql to enable cloud sync for the Templo.');
+  }
+
   // Push local-only items so the other side gets them too
   if (localOnlyExp.length > 0) {
     await supabaseClient.from('expenses').upsert(localOnlyExp.map(expenseToRow));
@@ -3321,6 +3665,10 @@ async function mergeWithCloud() {
   }
   if (!settingsRes.data) {
     await supabaseClient.from('app_settings').upsert(settingsRowOut());
+  }
+  if (goalsAvailable && localOnlyGoals.length > 0) {
+    try { await supabaseClient.from('goals').upsert(localOnlyGoals.map(goalToRow)); }
+    catch (e) { console.warn('push local goals', e); }
   }
 
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -3333,6 +3681,7 @@ async function mergeWithCloud() {
   rebuildConceptHints();
   if (currentView === 'world') renderWorld();
   if (currentView === 'stats') renderStats();
+  if (currentView === 'temple') buildTempleView();
   if (document.getElementById('historyPanel').classList.contains('show')) { buildHistoryFilters(); renderHistory(); }
 }
 
@@ -3344,7 +3693,27 @@ function setupRealtime(household) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses',     filter: `household_id=eq.${household}` }, onRemoteExpense)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'papas',        filter: `household_id=eq.${household}` }, onRemotePapa)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings', filter: `household_id=eq.${household}` }, onRemoteSettings)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'goals',        filter: `household_id=eq.${household}` }, onRemoteGoal)
     .subscribe();
+}
+function onRemoteGoal(payload) {
+  const { eventType, new: row, old: oldRow } = payload;
+  const id = (row?.id) || (oldRow?.id);
+  if (!id) return;
+  const echoKey = 'g:' + eventType + ':' + id;
+  if (ignoreEcho.has(echoKey)) { ignoreEcho.delete(echoKey); return; }
+  if (!Array.isArray(state.goals)) state.goals = [];
+  if (eventType === 'DELETE') {
+    state.goals = state.goals.filter(g => g.id !== id);
+  } else {
+    const incoming = rowToGoal(row);
+    const idx = state.goals.findIndex(g => g.id === id);
+    if (idx >= 0) state.goals[idx] = incoming;
+    else state.goals.push(incoming);
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  if (currentView === 'temple') buildTempleView();
+  flashCloud();
 }
 function onRemoteExpense(payload) {
   const { eventType, new: row, old: oldRow } = payload;
@@ -3450,6 +3819,28 @@ async function cloudPushSettings() {
   ignoreEcho.add('s');
   try { await supabaseClient.from('app_settings').upsert(settingsRowOut()); }
   catch (e) { console.warn('cloudPushSettings', e); }
+}
+async function cloudPushGoal(goal) {
+  if (!cloudConnected || !supabaseClient || !goal) return;
+  ignoreEcho.add('g:INSERT:' + goal.id);
+  ignoreEcho.add('g:UPDATE:' + goal.id);
+  try { await supabaseClient.from('goals').upsert(goalToRow(goal)); }
+  catch (e) { console.warn('cloudPushGoal', e); }
+}
+async function cloudDeleteGoal(goalId) {
+  if (!cloudConnected || !supabaseClient || !goalId) return;
+  ignoreEcho.add('g:DELETE:' + goalId);
+  const { household } = getCloudCreds();
+  try { await supabaseClient.from('goals').delete().eq('household_id', household).eq('id', goalId); }
+  catch (e) { console.warn('cloudDeleteGoal', e); }
+}
+async function cloudPushAllGoals() {
+  if (!cloudConnected || !supabaseClient) return;
+  const goals = getGoals();
+  if (goals.length === 0) return;
+  goals.forEach(g => { ignoreEcho.add('g:INSERT:' + g.id); ignoreEcho.add('g:UPDATE:' + g.id); });
+  try { await supabaseClient.from('goals').upsert(goals.map(goalToRow)); }
+  catch (e) { console.warn('cloudPushAllGoals', e); }
 }
 
 /* === Invitation URL === */

@@ -192,6 +192,11 @@
           <h3 data-i18n="stats.top5">TOP 5 GASTOS MÁS CAROS</h3>
           <div id="topExpenses"></div>
         </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="cycles.title">CICLOS HISTÓRICOS</h3>
+          <div class="cycles-list" id="cyclesList"></div>
+        </div>
       </div>
     </section>
 
@@ -504,6 +509,29 @@
       <button class="modal-btn save" id="settleSave" data-i18n="modal.register">REGISTRAR</button>
     </div>
   </div>
+</div>
+
+<!-- ===== MONTH-END RITUAL (cycle close cutscene) ===== -->
+<div class="month-end-ritual" id="monthEndRitual" hidden>
+  <div class="month-end-content">
+    <div class="month-end-eyebrow" data-i18n="month_end.eyebrow">CICLO CERRADO</div>
+    <div class="month-end-title" id="monthEndTitle">—</div>
+    <div class="month-end-stats" id="monthEndStats"></div>
+    <div class="month-end-tagline" data-i18n="month_end.tagline">EL THRONG RECUERDA</div>
+    <button class="month-end-dismiss" id="monthEndDismiss" type="button" data-i18n="month_end.continue">CONTINUAR</button>
+  </div>
+</div>
+
+<!-- ===== GOAL COMPLETION CELEBRATION ===== -->
+<div class="goal-celebration" id="goalCelebration" hidden>
+  <div class="celeb-vignette"></div>
+  <div class="celeb-content">
+    <div class="celeb-emoji" id="celebEmoji">🎉</div>
+    <div class="celeb-title" data-i18n="celeb.title">¡META ALCANZADA!</div>
+    <div class="celeb-name" id="celebName">—</div>
+    <div class="celeb-amount" id="celebAmount">0 €</div>
+  </div>
+  <div class="confetti-wrap" id="confettiWrap" aria-hidden="true"></div>
 </div>
 
 <!-- ===== SETTLE RITUAL OVERLAY ===== -->
