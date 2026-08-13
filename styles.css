@@ -2344,6 +2344,96 @@ h1 {
 }
 
 /* ============================================
+   AUTO-BACKUP SECTION (AJUSTES)
+   ============================================ */
+.backup-highlight {
+  border: 2px solid #7df9aa !important;
+  background: rgba(125,249,170,0.06) !important;
+  box-shadow: 0 0 18px rgba(125,249,170,0.15);
+}
+.backup-highlight h3 { color: #7df9aa; text-shadow: 0 0 8px rgba(125,249,170,0.4); }
+.backup-status-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(125,249,170,0.35);
+  background: rgba(0,0,0,0.4);
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+.backup-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #444;
+  box-shadow: 0 0 6px currentColor;
+  flex-shrink: 0;
+}
+.backup-dot.active {
+  background: #7df9aa; color: #7df9aa;
+  animation: backupDotPulse 2s ease-in-out infinite;
+}
+.backup-dot.inactive { background: #666; color: #666; }
+.backup-dot.unsupported { background: #c89cff; color: #c89cff; }
+.backup-dot.error { background: #ff5577; color: #ff5577; animation: backupDotPulse 0.7s ease-in-out infinite; }
+.backup-dot.permission-needed { background: #fff66d; color: #fff66d; animation: backupDotPulse 1s ease-in-out infinite; }
+@keyframes backupDotPulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px currentColor; }
+  50% { opacity: 0.6; box-shadow: 0 0 14px currentColor; }
+}
+.backup-label {
+  font-family: 'VT323', monospace; font-size: 15px;
+  color: #c89cff; flex: 1; min-width: 0;
+  word-break: break-word;
+}
+
+/* ============================================
+   DATA-LOSS MODAL
+   ============================================ */
+.dataloss-modal {
+  border-color: #ff5577 !important;
+  box-shadow: 0 0 32px rgba(255,85,119,0.5), 4px 4px 0 #c89cff !important;
+  max-width: 520px !important;
+}
+.dataloss-modal .modal-header {
+  color: #ff5577;
+  border-bottom-color: #ff5577;
+  background: rgba(255,85,119,0.08);
+  animation: datalossPulse 1.4s ease-in-out infinite;
+}
+@keyframes datalossPulse {
+  0%, 100% { background: rgba(255,85,119,0.08); }
+  50% { background: rgba(255,85,119,0.18); }
+}
+.dataloss-explain {
+  padding: 14px;
+  border: 2px dashed #ff5577;
+  background: rgba(255,85,119,0.1);
+  color: #ff5577;
+  font-family: 'VT323', monospace;
+  font-size: 17px;
+  line-height: 1.4;
+  margin-bottom: 14px;
+  text-align: center;
+}
+.dataloss-backup-line {
+  padding: 12px;
+  border: 1px solid #7df9aa;
+  background: rgba(125,249,170,0.08);
+  color: #7df9aa;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  text-align: center;
+  line-height: 1.4;
+}
+.dataloss-footer {
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+.dataloss-footer .modal-btn {
+  width: 100%;
+  min-height: 46px;
+  font-size: 11px;
+}
+
+/* ============================================
    SACRIFICE CONFIRM MODAL
    ============================================ */
 .sacrifice-modal {

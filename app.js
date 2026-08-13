@@ -199,6 +199,20 @@ const LOCALES = {
     'cloud.connect': '🔌 CONECTAR', 'cloud.connected_btn': '✓ CONECTADO',
     'cloud.invite': '📋 COPIAR URL INVITACIÓN', 'cloud.disconnect': 'DESCONECTAR',
     'cloud.guide': '📖 Guía paso a paso: abre <b>CLOUD_SETUP.md</b> en la carpeta del proyecto. Mientras no esté conectado, todo funciona en local con localStorage.',
+    'backup.auto_title': '🛡 AUTO-BACKUP (recomendado)',
+    'backup.auto_hint': 'Elige una carpeta del disco una sola vez. Cada cambio se guarda ahí en silencio + 7 snapshots diarios rotativos. Nunca más te preocupas.',
+    'backup.pick_folder': '🗂 ELEGIR CARPETA',
+    'backup.change_folder': '🔁 CAMBIAR CARPETA',
+    'backup.forget_folder': 'OLVIDAR',
+    'backup.fs_unsupported': 'Este navegador no soporta File System Access. En su lugar te descargará un JSON automático cada semana al Downloads.',
+    'backup.folder_set': 'Carpeta configurada: {name}. Auto-backup activo.',
+    'backup.restored': 'Datos restaurados del backup local.',
+    'dataloss.title': '⚠ POSIBLE PÉRDIDA DE DATOS',
+    'dataloss.explain': 'La sesión anterior tenía {prev} Thronglets. Ahora hay 0. Algo ha borrado tus datos.',
+    'dataloss.backup_line': 'Copia interna: {count} Thronglets · guardada {date}',
+    'dataloss.restore': '↻ RESTAURAR DEL BACKUP INTERNO',
+    'dataloss.import_json': '⬆ IMPORTAR JSON DEL DISCO',
+    'dataloss.dismiss': 'ignorar (empezar en blanco)',
     'settings.backup': '📦 COPIA DE SEGURIDAD LOCAL',
     'settings.backup_hint': 'Aunque tengas la nube activa, exporta de vez en cuando un JSON por si acaso.',
     'settings.export': '⬇ EXPORTAR JSON', 'settings.import': '⬆ IMPORTAR JSON',
@@ -415,6 +429,20 @@ const LOCALES = {
     'cloud.connect': '🔌 CONNECT', 'cloud.connected_btn': '✓ CONNECTED',
     'cloud.invite': '📋 COPY INVITE URL', 'cloud.disconnect': 'DISCONNECT',
     'cloud.guide': '📖 Step-by-step guide: open <b>CLOUD_SETUP.md</b> in the project folder. While not connected, everything works locally with localStorage.',
+    'backup.auto_title': '🛡 AUTO-BACKUP (recommended)',
+    'backup.auto_hint': 'Pick a folder on disk once. Every change writes there silently + 7 rotating daily snapshots. Never worry again.',
+    'backup.pick_folder': '🗂 PICK FOLDER',
+    'backup.change_folder': '🔁 CHANGE FOLDER',
+    'backup.forget_folder': 'FORGET',
+    'backup.fs_unsupported': 'This browser lacks File System Access. Instead, a JSON auto-downloads weekly to Downloads.',
+    'backup.folder_set': 'Folder set: {name}. Auto-backup active.',
+    'backup.restored': 'Data restored from local backup.',
+    'dataloss.title': '⚠ POSSIBLE DATA LOSS',
+    'dataloss.explain': 'Previous session had {prev} Thronglets. Now there are 0. Something wiped your data.',
+    'dataloss.backup_line': 'Internal copy: {count} Thronglets · saved {date}',
+    'dataloss.restore': '↻ RESTORE FROM INTERNAL BACKUP',
+    'dataloss.import_json': '⬆ IMPORT JSON FROM DISK',
+    'dataloss.dismiss': 'dismiss (start fresh)',
     'settings.backup': '📦 LOCAL BACKUP',
     'settings.backup_hint': 'Even with cloud sync, export a JSON every now and then just in case.',
     'settings.export': '⬇ EXPORT JSON', 'settings.import': '⬆ IMPORT JSON',
@@ -620,6 +648,7 @@ function load() {
   return null;
 }
 let lastSavedAt = 0;
+let saveThrottle = null;
 function save() {
   const json = JSON.stringify(state);
   try {
@@ -627,6 +656,14 @@ function save() {
     localStorage.setItem(BACKUP_KEY, JSON.stringify({ data: state, savedAt: Date.now() }));
     lastSavedAt = Date.now();
     pulseSaveIndicator();
+    // Persist "last session size" for the data-loss detector
+    try {
+      const nonSettlements = state.expenses.filter(e => e.type !== 'settlement').length;
+      localStorage.setItem('throngwallet-last-count', String(nonSettlements));
+    } catch (e) {}
+    // Layer A: throttled push to auto-backup folder if configured
+    if (saveThrottle) clearTimeout(saveThrottle);
+    saveThrottle = setTimeout(() => { autoBackupWrite(json).catch(e => console.warn('autoBackupWrite', e)); }, 800);
   } catch (e) {
     console.warn('save failed', e);
     alert(t('alert.save_failed'));
@@ -655,6 +692,259 @@ let state = load() || {
   papas: JSON.parse(JSON.stringify(DEFAULT_PAPAS)),
   settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
 };
+
+/* ============================================
+   2b. AUTO-BACKUP SYSTEM
+   ─────────────────────────────────────────────
+   3 layers of defense against data loss:
+   A. File System Access API — user picks a folder ONCE, then every
+      save() silently writes latest.json + rotating daily snapshots.
+   B. Weekly auto-download — silent fallback for browsers without
+      the API (iOS Safari).
+   C. Data-loss detection — on boot, if last-session had >=5 throngs
+      and now there are 0, show a big modal offering restore.
+   ============================================ */
+
+const IDB_NAME = 'throngwallet-idb';
+const IDB_STORE = 'handles';
+const IDB_KEY = 'backupDir';
+const LAST_AUTO_DL_KEY = 'throngwallet-last-auto-dl';
+const AUTO_DL_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+
+let backupDirHandle = null;
+let backupWriting = false;
+
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function idbGet(key) {
+  try {
+    const db = await idbOpen();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const req = tx.objectStore(IDB_STORE).get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) { return null; }
+}
+async function idbSet(key, value) {
+  try {
+    const db = await idbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) { console.warn('idbSet', e); }
+}
+async function idbDelete(key) {
+  try {
+    const db = await idbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = resolve;
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {}
+}
+
+function fsApiAvailable() {
+  return typeof window.showDirectoryPicker === 'function';
+}
+
+async function pickBackupFolder() {
+  if (!fsApiAvailable()) {
+    alert(t('backup.fs_unsupported'));
+    return false;
+  }
+  try {
+    const handle = await window.showDirectoryPicker({ id: 'throng-backup', mode: 'readwrite' });
+    backupDirHandle = handle;
+    await idbSet(IDB_KEY, handle);
+    // Trigger an immediate write so we know it works
+    await autoBackupWrite(JSON.stringify(state));
+    updateAutoBackupUI('active', handle.name);
+    chime();
+    speak('KRII-MOK!', t('backup.folder_set', { name: handle.name }));
+    return true;
+  } catch (e) {
+    if (e.name !== 'AbortError') console.warn('pickBackupFolder', e);
+    return false;
+  }
+}
+
+async function forgetBackupFolder() {
+  backupDirHandle = null;
+  await idbDelete(IDB_KEY);
+  updateAutoBackupUI('inactive');
+}
+
+async function verifyBackupPermission() {
+  if (!backupDirHandle) return false;
+  try {
+    if ((await backupDirHandle.queryPermission({ mode: 'readwrite' })) === 'granted') return true;
+    // Requesting requires user gesture — return false until re-picked
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function autoBackupWrite(json) {
+  if (backupWriting) return;
+  if (!backupDirHandle) return;
+  backupWriting = true;
+  try {
+    const granted = await verifyBackupPermission();
+    if (!granted) { updateAutoBackupUI('permission-needed'); return; }
+    // Latest.json (always overwritten)
+    const latest = await backupDirHandle.getFileHandle('throngwallet-latest.json', { create: true });
+    let w = await latest.createWritable();
+    await w.write(json);
+    await w.close();
+    // Daily snapshot
+    const dayName = 'throngwallet-' + new Date().toISOString().slice(0,10) + '.json';
+    const daily = await backupDirHandle.getFileHandle(dayName, { create: true });
+    w = await daily.createWritable();
+    await w.write(json);
+    await w.close();
+    // Rotate: keep last 7 dailies
+    await rotateBackupSnapshots(7);
+    updateAutoBackupUI('active', backupDirHandle.name);
+  } catch (e) {
+    console.warn('autoBackupWrite', e);
+    updateAutoBackupUI('error', e.message);
+  } finally {
+    backupWriting = false;
+  }
+}
+
+async function rotateBackupSnapshots(keep) {
+  if (!backupDirHandle) return;
+  try {
+    const snapshots = [];
+    for await (const [name, entry] of backupDirHandle.entries()) {
+      if (entry.kind !== 'file') continue;
+      const m = name.match(/^throngwallet-(\d{4}-\d{2}-\d{2})\.json$/);
+      if (m) snapshots.push({ name, date: m[1] });
+    }
+    snapshots.sort((a, b) => a.date.localeCompare(b.date));
+    while (snapshots.length > keep) {
+      const old = snapshots.shift();
+      try { await backupDirHandle.removeEntry(old.name); } catch (e) {}
+    }
+  } catch (e) { console.warn('rotateBackupSnapshots', e); }
+}
+
+async function initAutoBackup() {
+  const stored = await idbGet(IDB_KEY);
+  if (stored) {
+    backupDirHandle = stored;
+    const granted = await verifyBackupPermission();
+    updateAutoBackupUI(granted ? 'active' : 'permission-needed', stored.name);
+  } else {
+    updateAutoBackupUI(fsApiAvailable() ? 'inactive' : 'unsupported');
+  }
+  // Layer B: weekly auto-download fallback (silent)
+  maybeWeeklyAutoDownload();
+}
+
+function maybeWeeklyAutoDownload() {
+  try {
+    if (backupDirHandle) return; // Layer A already active
+    const last = parseInt(localStorage.getItem(LAST_AUTO_DL_KEY) || '0', 10);
+    if (Date.now() - last < AUTO_DL_INTERVAL_MS) return;
+    const nonSettle = state.expenses.filter(e => e.type !== 'settlement');
+    if (nonSettle.length < 3) return; // don't spam downloads for empty apps
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `throngwallet-auto-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    localStorage.setItem(LAST_AUTO_DL_KEY, String(Date.now()));
+  } catch (e) { console.warn('weekly auto-download', e); }
+}
+
+function updateAutoBackupUI(status, detail) {
+  const dot = document.getElementById('backupDot');
+  const label = document.getElementById('backupLabel');
+  const pickBtn = document.getElementById('backupPickBtn');
+  const forgetBtn = document.getElementById('backupForgetBtn');
+  if (!dot || !label) return;
+  dot.className = 'backup-dot ' + status;
+  const es = {
+    active: `activo · ${detail || ''}`,
+    'permission-needed': 'permiso caducado — pulsa ELEGIR CARPETA otra vez',
+    inactive: 'no configurado — se recomienda elegir carpeta',
+    unsupported: 'navegador no soporta — sale un JSON semanal automático al Downloads',
+    error: `error: ${detail || ''}`
+  };
+  const en = {
+    active: `active · ${detail || ''}`,
+    'permission-needed': 'permission expired — click PICK FOLDER again',
+    inactive: 'not configured — recommend picking a folder',
+    unsupported: 'browser unsupported — a weekly JSON drops to Downloads automatically',
+    error: `error: ${detail || ''}`
+  };
+  const msg = (currentLang() === 'en' ? en : es)[status] || status;
+  label.textContent = msg;
+  if (pickBtn) pickBtn.hidden = (status === 'active');
+  if (forgetBtn) forgetBtn.hidden = (status !== 'active' && status !== 'permission-needed');
+}
+
+/* Layer C: data-loss detection at boot */
+function checkDataLoss() {
+  try {
+    const lastCount = parseInt(localStorage.getItem('throngwallet-last-count') || '0', 10);
+    const nowCount = state.expenses.filter(e => e.type !== 'settlement').length;
+    if (lastCount >= 5 && nowCount === 0) {
+      showDataLossModal(lastCount);
+    }
+  } catch (e) {}
+}
+
+function showDataLossModal(lastCount) {
+  const backup = (() => {
+    try { return JSON.parse(localStorage.getItem(BACKUP_KEY)); } catch (e) { return null; }
+  })();
+  const backupCount = backup?.data?.expenses?.filter(e => e.type !== 'settlement').length || 0;
+  const backupDate = backup?.savedAt ? new Date(backup.savedAt).toLocaleString() : '—';
+  const overlay = document.getElementById('dataLossModal');
+  if (!overlay) return;
+  document.getElementById('dataLossExplain').textContent = t('dataloss.explain', { prev: lastCount });
+  document.getElementById('dataLossBackupLine').textContent = t('dataloss.backup_line', { count: backupCount, date: backupDate });
+  document.getElementById('dataLossRestoreBtn').hidden = backupCount === 0;
+  overlay.hidden = false;
+  alertCry();
+}
+
+function restoreFromLocalBackup() {
+  try {
+    const backup = JSON.parse(localStorage.getItem(BACKUP_KEY));
+    if (!backup?.data) return;
+    const migrated = migrate(backup.data);
+    if (!migrated) return;
+    state = migrated;
+    save();
+    document.getElementById('dataLossModal').hidden = true;
+    rebuildConceptHints(); rebuildPapaUI();
+    renderColony(); renderDeudas(); populateSettings();
+    chime();
+    speak('KRII-MOK!', t('backup.restored'));
+  } catch (e) {
+    console.warn('restoreFromLocalBackup', e);
+  }
+}
 
 let selectedPapa = null;
 let selectedTutor = 'Isi';
@@ -1848,6 +2138,125 @@ function buildUniverseMapSVG() {
 
       <!-- Fireflies -->
       <g class="fireflies">${fireflies}</g>
+
+      <!-- Waterfall from mountain into river -->
+      <g class="waterfall">
+        <!-- rocky ledge -->
+        <path d="M 1650 340 L 1720 340 L 1710 420 L 1660 420 Z" fill="#5a2088" stroke="#1a0033" stroke-width="1.5"/>
+        <!-- falling water column -->
+        <rect x="1665" y="410" width="42" height="180" fill="#66ddff" opacity="0.75">
+          <animate attributeName="opacity" values="0.65;0.85;0.65" dur="0.8s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="1670" y="410" width="12" height="180" fill="#a0eaff" opacity="0.6">
+          <animate attributeName="opacity" values="0.4;0.8;0.4" dur="1.1s" repeatCount="indefinite"/>
+        </rect>
+        <rect x="1690" y="410" width="8" height="180" fill="#a0eaff" opacity="0.5">
+          <animate attributeName="opacity" values="0.3;0.7;0.3" dur="0.6s" repeatCount="indefinite"/>
+        </rect>
+        <!-- foam at the base -->
+        <ellipse cx="1686" cy="600" rx="34" ry="9" fill="#fff9d0" opacity="0.7">
+          <animate attributeName="opacity" values="0.5;0.9;0.5" dur="1.3s" repeatCount="indefinite"/>
+        </ellipse>
+        <!-- spray particles -->
+        <circle cx="1665" cy="595" r="2" fill="#a0eaff">
+          <animate attributeName="cy" values="595;585;600" dur="1.4s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0.3;1" dur="1.4s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="1707" cy="598" r="2" fill="#a0eaff">
+          <animate attributeName="cy" values="598;588;603" dur="1.6s" repeatCount="indefinite" begin="0.4s"/>
+          <animate attributeName="opacity" values="1;0.3;1" dur="1.6s" repeatCount="indefinite" begin="0.4s"/>
+        </circle>
+      </g>
+
+      <!-- Sailboat drifting the river left→right, then loop -->
+      <g class="sailboat">
+        <g>
+          <animateTransform attributeName="transform" type="translate"
+            values="-120,0; ${W+120},0" dur="42s" repeatCount="indefinite"/>
+          <!-- hull -->
+          <path d="M 0 610 L 60 610 L 52 626 L 8 626 Z" fill="#7a5028" stroke="#1a0033" stroke-width="1.5"/>
+          <!-- mast -->
+          <line x1="30" y1="610" x2="30" y2="560" stroke="#4a2810" stroke-width="2"/>
+          <!-- sail (triangle) -->
+          <path d="M 30 560 L 30 604 L 60 600 Z" fill="#ff6ec7" stroke="#1a0033" stroke-width="1.5"/>
+          <path d="M 30 560 L 30 590 L 14 594 Z" fill="#c89cff" stroke="#1a0033" stroke-width="1"/>
+          <!-- flag -->
+          <rect x="29" y="558" width="2" height="4" fill="#4a2810"/>
+          <path d="M 31 559 L 40 561 L 31 563 Z" fill="#fff66d">
+            <animate attributeName="d" values="M 31 559 L 40 561 L 31 563 Z; M 31 559 L 42 559 L 31 563 Z; M 31 559 L 40 561 L 31 563 Z" dur="1.6s" repeatCount="indefinite"/>
+          </path>
+          <!-- wake -->
+          <ellipse cx="4" cy="628" rx="10" ry="2" fill="#a0eaff" opacity="0.6">
+            <animate attributeName="opacity" values="0.4;0.7;0.4" dur="1.3s" repeatCount="indefinite"/>
+          </ellipse>
+        </g>
+      </g>
+
+      <!-- Chimney smoke from village houses -->
+      <g class="smoke">
+        <!-- house 1 chimney smoke -->
+        <circle cx="1018" cy="895" r="4" fill="#c89cff" opacity="0.6">
+          <animate attributeName="cy" values="895;855;830" dur="4s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.6;0.4;0" dur="4s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="3;6;9" dur="4s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="1018" cy="895" r="4" fill="#c89cff" opacity="0.5">
+          <animate attributeName="cy" values="895;855;830" dur="4s" begin="1.3s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.5;0.3;0" dur="4s" begin="1.3s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="3;6;9" dur="4s" begin="1.3s" repeatCount="indefinite"/>
+        </circle>
+        <!-- house 4 (menta) chimney smoke -->
+        <circle cx="972" cy="965" r="3" fill="#a0a0b8" opacity="0.55">
+          <animate attributeName="cy" values="965;925;900" dur="5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.55;0.35;0" dur="5s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="3;6;10" dur="5s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="972" cy="965" r="3" fill="#a0a0b8" opacity="0.5">
+          <animate attributeName="cy" values="965;925;900" dur="5s" begin="1.7s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.5;0.3;0" dur="5s" begin="1.7s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="3;6;10" dur="5s" begin="1.7s" repeatCount="indefinite"/>
+        </circle>
+        <!-- house 6 (aqua) chimney smoke -->
+        <circle cx="1140" cy="1005" r="3" fill="#c89cff" opacity="0.55">
+          <animate attributeName="cy" values="1005;965;935" dur="4.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.55;0.3;0" dur="4.5s" repeatCount="indefinite"/>
+          <animate attributeName="r" values="3;5;9" dur="4.5s" repeatCount="indefinite"/>
+        </circle>
+      </g>
+
+      <!-- Flock of birds crossing the sky -->
+      <g class="birds">
+        <g>
+          <animateTransform attributeName="transform" type="translate"
+            values="${W+80},0; -200,60" dur="55s" repeatCount="indefinite"/>
+          <path d="M 0 180 q 6 -6 12 0 q 6 -6 12 0" fill="none" stroke="#fff66d" stroke-width="1.5" opacity="0.85">
+            <animate attributeName="d" values="M 0 180 q 6 -6 12 0 q 6 -6 12 0; M 0 180 q 6 -3 12 0 q 6 -3 12 0; M 0 180 q 6 -6 12 0 q 6 -6 12 0" dur="0.7s" repeatCount="indefinite"/>
+          </path>
+          <path d="M 32 195 q 5 -5 10 0 q 5 -5 10 0" fill="none" stroke="#fff66d" stroke-width="1.2" opacity="0.75">
+            <animate attributeName="d" values="M 32 195 q 5 -5 10 0 q 5 -5 10 0; M 32 195 q 5 -2 10 0 q 5 -2 10 0; M 32 195 q 5 -5 10 0 q 5 -5 10 0" dur="0.7s" begin="0.1s" repeatCount="indefinite"/>
+          </path>
+          <path d="M 60 175 q 5 -5 10 0 q 5 -5 10 0" fill="none" stroke="#fff66d" stroke-width="1.4" opacity="0.9">
+            <animate attributeName="d" values="M 60 175 q 5 -5 10 0 q 5 -5 10 0; M 60 175 q 5 -2 10 0 q 5 -2 10 0; M 60 175 q 5 -5 10 0 q 5 -5 10 0" dur="0.65s" begin="0.15s" repeatCount="indefinite"/>
+          </path>
+          <path d="M 88 205 q 4 -4 8 0 q 4 -4 8 0" fill="none" stroke="#fff66d" stroke-width="1.1" opacity="0.7">
+            <animate attributeName="d" values="M 88 205 q 4 -4 8 0 q 4 -4 8 0; M 88 205 q 4 -1 8 0 q 4 -1 8 0; M 88 205 q 4 -4 8 0 q 4 -4 8 0" dur="0.75s" begin="0.05s" repeatCount="indefinite"/>
+          </path>
+        </g>
+      </g>
+
+      <!-- Throng flag on the windmill -->
+      <g class="throng-flag" transform="translate(410, 685)">
+        <rect x="0" y="0" width="2" height="26" fill="#4a2810"/>
+        <path d="M 2 2 L 24 4 L 20 10 L 24 16 L 2 14 Z" fill="#ff6ec7" stroke="#1a0033" stroke-width="0.8">
+          <animate attributeName="d"
+            values="M 2 2 L 24 4 L 20 10 L 24 16 L 2 14 Z;
+                    M 2 2 L 22 6 L 26 10 L 22 14 L 2 14 Z;
+                    M 2 2 L 24 4 L 20 10 L 24 16 L 2 14 Z"
+            dur="2.2s" repeatCount="indefinite"/>
+        </path>
+        <circle cx="12" cy="9" r="3" fill="#fff66d" opacity="0.9"/>
+        <circle cx="12" cy="9" r="1.5" fill="#0a0014"/>
+      </g>
 
       <!-- Vignette overlay -->
       <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
@@ -3925,6 +4334,27 @@ function bindEvents() {
   document.getElementById('saveSettings').addEventListener('click', saveSettings);
   document.getElementById('wipeAllBtn').addEventListener('click', wipeAll);
   document.getElementById('resetMonthBtn').addEventListener('click', resetMonthBtn);
+
+  // Auto-backup
+  const backupPickBtn = document.getElementById('backupPickBtn');
+  if (backupPickBtn) backupPickBtn.addEventListener('click', pickBackupFolder);
+  const backupForgetBtn = document.getElementById('backupForgetBtn');
+  if (backupForgetBtn) backupForgetBtn.addEventListener('click', forgetBackupFolder);
+
+  // Data-loss modal
+  const dlRestore = document.getElementById('dataLossRestoreBtn');
+  if (dlRestore) dlRestore.addEventListener('click', restoreFromLocalBackup);
+  const dlImport = document.getElementById('dataLossImportBtn');
+  if (dlImport) dlImport.addEventListener('click', () => {
+    document.getElementById('dataLossModal').hidden = true;
+    triggerImport();
+  });
+  const dlDismiss = document.getElementById('dataLossDismissBtn');
+  if (dlDismiss) dlDismiss.addEventListener('click', () => {
+    if (confirm(currentLang() === 'en' ? 'Really dismiss? Data will stay empty.' : '¿Seguro ignorar? Los datos quedarán vacíos.')) {
+      document.getElementById('dataLossModal').hidden = true;
+    }
+  });
   document.getElementById('sacrificeClose').addEventListener('click', closeSacrificeModal);
   document.getElementById('sacrificeCancel').addEventListener('click', closeSacrificeModal);
   document.getElementById('sacrificeConfirm').addEventListener('click', confirmSacrifice);
@@ -4092,6 +4522,8 @@ function init() {
   updateSaveLabel();
   initBackgroundMusic();
   setMusicStatus('idle');
+  initAutoBackup();
+  checkDataLoss();
 }
 init();
 

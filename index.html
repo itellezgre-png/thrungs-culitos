@@ -299,6 +299,19 @@
           <div class="setting-row"><span class="setting-label" data-i18n="settings.music_vol">VOL. MÚSICA</span><input type="range" id="musicVolume" min="0" max="100" value="40"><span class="setting-suffix"><span id="musicVolLabel">40</span>%</span></div>
         </div>
 
+        <div class="settings-group backup-highlight">
+          <h3 data-i18n="backup.auto_title">🛡 AUTO-BACKUP (recomendado)</h3>
+          <p class="hint-text" data-i18n="backup.auto_hint">Elige una carpeta del disco una sola vez. Cada cambio se guarda ahí en silencio + 7 snapshots diarios rotativos.</p>
+          <div class="backup-status-row">
+            <span class="backup-dot inactive" id="backupDot"></span>
+            <span class="backup-label" id="backupLabel">—</span>
+          </div>
+          <div class="backup-row">
+            <button class="backup-btn export" id="backupPickBtn" type="button" data-i18n="backup.pick_folder">🗂 ELEGIR CARPETA</button>
+            <button class="backup-btn" id="backupForgetBtn" type="button" hidden data-i18n="backup.forget_folder">OLVIDAR</button>
+          </div>
+        </div>
+
         <div class="settings-group">
           <h3 data-i18n="settings.backup">📦 COPIA DE SEGURIDAD</h3>
           <p class="hint-text" data-i18n="settings.backup_hint">Los datos viven en el localStorage del navegador. Exporta un JSON cada tanto y guárdalo bien: si limpias caché o cambias de equipo, sin backup se pierden.</p>
@@ -504,6 +517,24 @@
     <div class="modal-footer">
       <button class="modal-btn cancel" id="settleCancel" data-i18n="modal.cancel">CANCELAR</button>
       <button class="modal-btn save" id="settleSave" data-i18n="modal.register">REGISTRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DATA-LOSS DETECTION MODAL ===== -->
+<div class="modal-backdrop" id="dataLossModal" hidden>
+  <div class="modal dataloss-modal">
+    <div class="modal-header">
+      <span data-i18n="dataloss.title">⚠ POSIBLE PÉRDIDA DE DATOS</span>
+    </div>
+    <div class="modal-body">
+      <p class="dataloss-explain" id="dataLossExplain">—</p>
+      <div class="dataloss-backup-line" id="dataLossBackupLine">—</div>
+    </div>
+    <div class="modal-footer dataloss-footer">
+      <button class="modal-btn save" id="dataLossRestoreBtn" type="button" data-i18n="dataloss.restore">↻ RESTAURAR DEL BACKUP INTERNO</button>
+      <button class="modal-btn" id="dataLossImportBtn" type="button" data-i18n="dataloss.import_json">⬆ IMPORTAR JSON DEL DISCO</button>
+      <button class="modal-btn cancel" id="dataLossDismissBtn" type="button" data-i18n="dataloss.dismiss">ignorar</button>
     </div>
   </div>
 </div>
