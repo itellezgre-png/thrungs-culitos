@@ -40,6 +40,7 @@
       <nav class="tabs">
         <button class="tab active" data-view="colony" data-i18n="tab.colony">COLONIA</button>
         <button class="tab" data-view="world" data-i18n="tab.world">MUNDO</button>
+        <button class="tab" data-view="universe" data-i18n="tab.universe">UNIVERSO</button>
         <button class="tab" data-view="stats" data-i18n="tab.stats">STATS</button>
         <button class="tab" data-view="temple" data-i18n="tab.temple">TEMPLO</button>
         <button class="tab" data-view="settings" data-i18n="tab.settings">AJUSTES</button>
@@ -54,7 +55,6 @@
         <div class="pill total" id="totalPill"><span data-i18n="hud.spent">GASTADO</span>: <span id="total">0,00</span> €</div>
         <div class="pill"><span data-i18n="hud.born">NACIDOS</span>: <span id="bornCount">0</span></div>
         <div class="pill save-indicator" id="saveIndicator">💾 <span id="saveLabel">—</span></div>
-        <div class="pill cloud-pill cloud-offline" id="cloudPill" data-i18n="cloud.local">☁️ LOCAL</div>
         <div class="pill projection-pill" id="projectionPill" hidden>📈 <span data-i18n="hud.projection">PROY</span>: <span id="projectionValue">—</span> €</div>
       </div>
 
@@ -141,6 +141,26 @@
         <div><span class="tutor-dot gayle"></span> GAYLE</div>
         <div class="legend-recurring" data-i18n="world.legend_recurring">♺ SUSCRI = recurrente</div>
         <div class="legend-tip" data-i18n="world.legend_tip">clica para oír · cuando chocan cantan</div>
+      </div>
+    </section>
+
+    <!-- ============ UNIVERSE ============ -->
+    <section id="universe-view" class="view">
+      <div class="universe-header">
+        <span class="universe-title">🌌 <span data-i18n="universe.title">UNIVERSO THRONG</span></span>
+        <span class="universe-stats">
+          <span id="universeTotal">0</span> <span data-i18n="universe.total">THRONGS</span> ·
+          <span id="universeMonths">0</span> <span data-i18n="universe.moons">LUNAS</span>
+        </span>
+        <span class="universe-hint" data-i18n="universe.hint">arrastra el mapa · toca un throng</span>
+      </div>
+      <div class="universe-map-wrap" id="universeMapWrap">
+        <div class="universe-map" id="universeMap"></div>
+      </div>
+      <div class="universe-legend">
+        <div><span class="tutor-dot isi"></span> ISI</div>
+        <div><span class="tutor-dot gayle"></span> GAYLE</div>
+        <div class="legend-tip" data-i18n="universe.legend_tip">TODA la historia en un solo mapa</div>
       </div>
     </section>
 
@@ -265,6 +285,11 @@
         <div class="settings-group">
           <h3 data-i18n="settings.music">🎵 MÚSICA DE FONDO</h3>
           <p class="hint-text" data-i18n="settings.music_hint">Música ambiental Throng. Empieza al entrar a la app.</p>
+          <div class="music-status-row">
+            <span class="music-status-dot idle" id="musicStatusDot"></span>
+            <span class="music-status-label" id="musicStatusLabel">—</span>
+            <button class="backup-btn music-manual-start" id="musicManualStart" type="button" hidden data-i18n="settings.music_manual">▶ INICIAR MÚSICA</button>
+          </div>
           <div class="setting-row"><span class="setting-label" data-i18n="settings.music_play">REPRODUCIR</span>
             <label class="switch-toggle">
               <input type="checkbox" id="musicPlaying" checked>
@@ -275,36 +300,8 @@
         </div>
 
         <div class="settings-group">
-          <h3 data-i18n="settings.cloud">☁️ SINCRONIZACIÓN NUBE</h3>
-          <p class="hint-text" data-i18n="settings.cloud_hint">Cuando se conecta, los gastos y cambios se ven en vivo en cualquier dispositivo conectado al mismo hogar. Sigue funcionando offline; al volver online sincroniza.</p>
-          <div class="cloud-status-row">
-            <span class="cloud-status-label" data-i18n="settings.status">Estado:</span>
-            <span class="cloud-status-value" id="cloudStatus" data-i18n="cloud.status.disconnected">○ Desconectado (solo local)</span>
-          </div>
-
-          <div class="cloud-form" id="cloudForm">
-            <div class="setting-row"><span class="setting-label" data-i18n="cloud.url">URL</span>
-              <input type="text" id="cloudUrl" placeholder="https://xxx.supabase.co" autocomplete="off">
-            </div>
-            <div class="setting-row"><span class="setting-label" data-i18n="cloud.anon_key">ANON KEY</span>
-              <input type="password" id="cloudKey" placeholder="eyJ..." autocomplete="off">
-            </div>
-            <div class="setting-row"><span class="setting-label" data-i18n="cloud.household_id">HOUSEHOLD ID</span>
-              <span class="cloud-household" id="cloudHousehold">—</span>
-            </div>
-            <div class="backup-row">
-              <button class="backup-btn import" id="connectBtn" data-i18n="cloud.connect">🔌 CONECTAR</button>
-              <button class="backup-btn export" id="inviteBtn" disabled data-i18n="cloud.invite">📋 COPIAR URL INVITACIÓN</button>
-              <button class="backup-btn" id="disconnectBtn" disabled data-i18n="cloud.disconnect">DESCONECTAR</button>
-            </div>
-          </div>
-
-          <p class="hint-text" style="margin-top:14px" data-i18n="cloud.guide" data-i18n-html>📖 Guía paso a paso: abre <b>CLOUD_SETUP.md</b> en la carpeta del proyecto.</p>
-        </div>
-
-        <div class="settings-group">
-          <h3 data-i18n="settings.backup">📦 COPIA DE SEGURIDAD LOCAL</h3>
-          <p class="hint-text" data-i18n="settings.backup_hint">Aunque tengas la nube activa, exporta de vez en cuando un JSON por si acaso.</p>
+          <h3 data-i18n="settings.backup">📦 COPIA DE SEGURIDAD</h3>
+          <p class="hint-text" data-i18n="settings.backup_hint">Los datos viven en el localStorage del navegador. Exporta un JSON cada tanto y guárdalo bien: si limpias caché o cambias de equipo, sin backup se pierden.</p>
           <div class="backup-row">
             <button class="backup-btn export" id="exportBtn" data-i18n="settings.export">⬇ EXPORTAR JSON</button>
             <button class="backup-btn import" id="importBtn" data-i18n="settings.import">⬆ IMPORTAR JSON</button>
@@ -507,6 +504,31 @@
     <div class="modal-footer">
       <button class="modal-btn cancel" id="settleCancel" data-i18n="modal.cancel">CANCELAR</button>
       <button class="modal-btn save" id="settleSave" data-i18n="modal.register">REGISTRAR</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SACRIFICE CONFIRM MODAL (double-check) ===== -->
+<div class="modal-backdrop" id="sacrificeModal" hidden>
+  <div class="modal sacrifice-modal">
+    <div class="modal-header">
+      <span data-i18n="sacrifice.title">⚠ SACRIFICIO — SIN VUELTA ATRÁS</span>
+      <button class="modal-close" id="sacrificeClose">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="sacrifice-warn" id="sacrificeWarn">—</div>
+      <div class="sacrifice-count" id="sacrificeCount">—</div>
+      <label class="modal-label" data-i18n="sacrifice.type_label">Escribe la palabra en mayúsculas para confirmar:</label>
+      <div class="sacrifice-keyword" id="sacrificeKeyword">SACRIFICAR</div>
+      <input type="text" id="sacrificeInput" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="—">
+      <label class="sacrifice-backup-row">
+        <input type="checkbox" id="sacrificeBackup" checked>
+        <span data-i18n="sacrifice.backup_first">Bajarme JSON de backup antes de sacrificar (recomendado)</span>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" id="sacrificeCancel" data-i18n="modal.cancel">CANCELAR</button>
+      <button class="modal-btn danger" id="sacrificeConfirm" disabled data-i18n="sacrifice.confirm">SACRIFICAR</button>
     </div>
   </div>
 </div>

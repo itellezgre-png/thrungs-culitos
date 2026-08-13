@@ -72,14 +72,20 @@ const DEFAULT_SETTINGS = {
   musicVolume: 0.4
 };
 
-const BGM_FILE = '05.%20Welcome%20Progress.mp3';
+const BGM_FILE = '05. Welcome Progress.mp3';
 
 /* ============================================
    1b. i18n (LOCALES, t() helper)
    ============================================ */
 const LOCALES = {
   es: {
-    'tab.colony': 'COLONIA', 'tab.world': 'MUNDO', 'tab.stats': 'STATS', 'tab.temple': 'TEMPLO', 'tab.settings': 'AJUSTES',
+    'tab.colony': 'COLONIA', 'tab.world': 'MUNDO', 'tab.universe': 'UNIVERSO', 'tab.stats': 'STATS', 'tab.temple': 'TEMPLO', 'tab.settings': 'AJUSTES',
+    'universe.title': 'UNIVERSO THRONG',
+    'universe.total': 'THRONGS',
+    'universe.moons': 'LUNAS',
+    'universe.hint': 'arrastra el mapa · toca un throng',
+    'universe.legend_tip': 'TODA la historia en un solo mapa',
+    'universe.empty': 'Aún no hay Throngs en el universo.',
     'hud.projection': 'PROY',
     'temple.title': '🏛 TEMPLO DEL AHORRO',
     'temple.hint': 'Metas comunes de ahorro. Cada vez que metáis dinero, los Thronglets peregrinan al templo.',
@@ -106,6 +112,7 @@ const LOCALES = {
     'settings.music_hint': 'Música ambiental Throng. Empieza al entrar a la app.',
     'settings.music_play': 'REPRODUCIR',
     'settings.music_vol': 'VOL. MÚSICA',
+    'settings.music_manual': '▶ INICIAR MÚSICA',
     'speak.goal_created': 'Meta creada en el templo.',
     'speak.goal_updated': 'Meta actualizada.',
     'speak.goal_completed': '¡META «{name}» COMPLETADA, tutor!',
@@ -199,8 +206,18 @@ const LOCALES = {
     'settings.install': '📲 INSTALAR COMO APP',
     'settings.install_hint': 'En Chrome/Edge móvil: menú · "Añadir a pantalla de inicio". En Safari iOS: compartir · "Añadir a inicio". En PC: icono de instalación en la barra de direcciones. Funciona offline.',
     'settings.sacrifice_zone': 'ZONA SACRIFICIO',
-    'settings.sacrifice_hint': 'Aquí mueren los Thronglets. No se puede deshacer.',
+    'settings.sacrifice_hint': 'Aquí mueren los Thronglets. No se puede deshacer. Se te pedirá escribir la palabra clave y te ofrecerá un backup automático antes.',
     'settings.sacrifice_month': 'SACRIFICAR ESTE MES', 'settings.sacrifice_all': 'SACRIFICAR TODA LA COLONIA',
+    'sacrifice.title': '⚠ SACRIFICIO — SIN VUELTA ATRÁS',
+    'sacrifice.type_label': 'Escribe la palabra en mayúsculas para confirmar:',
+    'sacrifice.backup_first': 'Bajarme JSON de backup antes de sacrificar (recomendado)',
+    'sacrifice.confirm': 'SACRIFICAR',
+    'sacrifice.warn_month': 'Vas a borrar {count} Thronglets del ciclo {month}. Esta acción NO se puede deshacer.',
+    'sacrifice.warn_all': 'Vas a borrar TODOS los Thronglets de TODOS los ciclos ({count} en total). Esta acción NO se puede deshacer.',
+    'sacrifice.count_summary': '{count} registros · desde {first} hasta {last}',
+    'sacrifice.keyword_month': 'SACRIFICAR MES',
+    'sacrifice.keyword_all': 'SACRIFICAR TODO',
+    'sacrifice.no_data': 'No hay Thronglets que sacrificar aquí.',
     'settings.save_btn': '💾 GUARDAR AJUSTES',
     'settings.language': 'IDIOMA',
     'settings.language_hint': 'Cambia el idioma de la interfaz.',
@@ -278,7 +295,13 @@ const LOCALES = {
     'pwa.dash': '—'
   },
   en: {
-    'tab.colony': 'COLONY', 'tab.world': 'WORLD', 'tab.stats': 'STATS', 'tab.temple': 'TEMPLE', 'tab.settings': 'SETTINGS',
+    'tab.colony': 'COLONY', 'tab.world': 'WORLD', 'tab.universe': 'UNIVERSE', 'tab.stats': 'STATS', 'tab.temple': 'TEMPLE', 'tab.settings': 'SETTINGS',
+    'universe.title': 'THRONG UNIVERSE',
+    'universe.total': 'THRONGS',
+    'universe.moons': 'MOONS',
+    'universe.hint': 'drag the map · tap a throng',
+    'universe.legend_tip': 'ALL the history on one map',
+    'universe.empty': 'No Throngs in the universe yet.',
     'hud.projection': 'PROJ',
     'temple.title': '🏛 SAVINGS TEMPLE',
     'temple.hint': 'Shared savings goals. Every time you add money, the Thronglets pilgrimage to the temple.',
@@ -305,6 +328,7 @@ const LOCALES = {
     'settings.music_hint': 'Ambient Throng music. Starts when entering the app.',
     'settings.music_play': 'PLAY',
     'settings.music_vol': 'MUSIC VOL.',
+    'settings.music_manual': '▶ START MUSIC',
     'speak.goal_created': 'Goal created in the temple.',
     'speak.goal_updated': 'Goal updated.',
     'speak.goal_completed': 'GOAL «{name}» COMPLETED, tutor!',
@@ -398,8 +422,18 @@ const LOCALES = {
     'settings.install': '📲 INSTALL AS APP',
     'settings.install_hint': 'In mobile Chrome/Edge: menu · "Add to home screen". In Safari iOS: share · "Add to home". On PC: install icon in the address bar. Works offline.',
     'settings.sacrifice_zone': 'SACRIFICE ZONE',
-    'settings.sacrifice_hint': 'Here Thronglets die. Cannot be undone.',
+    'settings.sacrifice_hint': 'Here Thronglets die. Cannot be undone. You will be asked to type the keyword and offered an auto-backup first.',
     'settings.sacrifice_month': 'SACRIFICE THIS MONTH', 'settings.sacrifice_all': 'SACRIFICE WHOLE COLONY',
+    'sacrifice.title': '⚠ SACRIFICE — NO GOING BACK',
+    'sacrifice.type_label': 'Type the keyword in uppercase to confirm:',
+    'sacrifice.backup_first': 'Download a backup JSON before sacrificing (recommended)',
+    'sacrifice.confirm': 'SACRIFICE',
+    'sacrifice.warn_month': 'You are about to delete {count} Thronglets from cycle {month}. This action CANNOT be undone.',
+    'sacrifice.warn_all': 'You are about to delete ALL Thronglets from ALL cycles ({count} total). This action CANNOT be undone.',
+    'sacrifice.count_summary': '{count} records · from {first} to {last}',
+    'sacrifice.keyword_month': 'SACRIFICE MONTH',
+    'sacrifice.keyword_all': 'SACRIFICE ALL',
+    'sacrifice.no_data': 'Nothing to sacrifice here.',
     'settings.save_btn': '💾 SAVE SETTINGS',
     'settings.language': 'LANGUAGE',
     'settings.language_hint': 'Change interface language.',
@@ -1290,6 +1324,8 @@ function showView(name) {
     if (!worldMonthKey) worldMonthKey = monthKey(new Date());
     renderWorld(); startWorldTick(); beep(900);
   } else { stopWorldTick(); beep(700); }
+  if (name === 'universe') { renderUniverse(); startUniverseTick(); }
+  else stopUniverseTick();
   if (name === 'settings') populateSettings();
   if (name === 'stats') renderStats();
   if (name === 'temple') buildTempleView();
@@ -1566,6 +1602,464 @@ function ambientTick() {
     }
   } else glitch();
 }
+
+/* ============================================
+   11a. UNIVERSE VIEW
+   ─────────────────────────────────────────────
+   ALL thronglets from ALL months on one huge 2D
+   pixel-art village map. Drag to pan. Wander +
+   collide + duet like the world view. Click for
+   story.
+   ============================================ */
+const UNIVERSE_MAP_W = 2000;
+const UNIVERSE_MAP_H = 1400;
+let universeThrongs = [];
+let universeRaf = null;
+let universeMapEl = null;
+let universeWrapEl = null;
+let universePan = { x: 0, y: 0 };
+let universeDrag = null;
+let universeLastCollisionCheck = 0;
+let universeBuilt = false;
+
+function buildUniverseMapSVG() {
+  const W = UNIVERSE_MAP_W;
+  const H = UNIVERSE_MAP_H;
+
+  // Deterministic pseudo-random (position by index → stable render across sessions)
+  const rng = (seed) => {
+    let s = seed | 0;
+    return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  };
+
+  // Stars in the sky area
+  const starR = rng(7);
+  let stars = '';
+  for (let i = 0; i < 90; i++) {
+    const x = starR() * W;
+    const y = starR() * 340;
+    const r = 0.6 + starR() * 1.8;
+    const o = 0.4 + starR() * 0.6;
+    stars += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r.toFixed(1)}" fill="#fff66d" opacity="${o.toFixed(2)}"/>`;
+  }
+
+  // Trees scattered in ground zones (avoid river band + village plaza + water)
+  const treeR = rng(31);
+  let trees = '';
+  for (let i = 0; i < 80; i++) {
+    const x = 60 + treeR() * (W - 120);
+    const y = 720 + treeR() * (H - 780);
+    // Skip an area around the village
+    const dvx = x - 1100, dvy = y - 950;
+    if (Math.hypot(dvx, dvy) < 220) continue;
+    // Skip an area around the river
+    if (Math.abs(y - 620) < 40) continue;
+    const scale = 0.7 + treeR() * 0.6;
+    const trunk = 'M -3 0 L 3 0 L 3 8 L -3 8 Z';
+    const leaves = `M 0 -22 L 14 0 L -14 0 Z`;
+    trees += `<g transform="translate(${x.toFixed(0)},${y.toFixed(0)}) scale(${scale.toFixed(2)})">
+      <path d="${trunk}" fill="#5a3018"/>
+      <path d="${leaves}" fill="#4a8028"/>
+      <path d="M 0 -18 L 10 -4 L -10 -4 Z" fill="#7df9aa" opacity="0.6"/>
+    </g>`;
+  }
+
+  // Distant mountain range (2 layers for depth)
+  const mnR = rng(11);
+  let mntPts1 = `0,340`;
+  for (let x = 0; x <= W; x += 90) {
+    mntPts1 += ` ${x},${(140 + mnR() * 140).toFixed(0)}`;
+  }
+  mntPts1 += ` ${W},340`;
+  const mnR2 = rng(19);
+  let mntPts2 = `0,340`;
+  for (let x = 0; x <= W; x += 60) {
+    mntPts2 += ` ${x},${(200 + mnR2() * 100).toFixed(0)}`;
+  }
+  mntPts2 += ` ${W},340`;
+
+  // Snow caps: small triangles on some highest points
+  let snow = '';
+  for (let x = 100; x < W; x += 200) {
+    const peak = 140 + mnR() * 40;
+    snow += `<polygon points="${x-12},${peak+18} ${x},${peak} ${x+12},${peak+18}" fill="#c89cff"/>`;
+  }
+
+  // Village houses cluster
+  const houses = [
+    { x: 1000, y: 900, roof: '#ff6ec7', wall: '#ff9dbc' },
+    { x: 1080, y: 940, roof: '#ff8866', wall: '#ffb098' },
+    { x: 1160, y: 895, roof: '#c89cff', wall: '#dbb3ff' },
+    { x: 950, y: 970, roof: '#7df9aa', wall: '#a5f5c0' },
+    { x: 1220, y: 950, roof: '#fff66d', wall: '#fff9a0' },
+    { x: 1120, y: 1010, roof: '#66ddff', wall: '#a0eaff' },
+    { x: 1030, y: 1030, roof: '#ff6ec7', wall: '#ff9dbc' }
+  ];
+  let houseSvg = '';
+  for (const h of houses) {
+    houseSvg += `<g transform="translate(${h.x},${h.y})">
+      <rect x="0" y="12" width="52" height="34" fill="${h.wall}" stroke="#1a0033" stroke-width="1.5"/>
+      <polygon points="-4,12 26,-8 56,12" fill="${h.roof}" stroke="#1a0033" stroke-width="1.5"/>
+      <rect x="20" y="26" width="12" height="20" fill="#4a2810" stroke="#1a0033" stroke-width="1"/>
+      <rect x="6" y="20" width="8" height="8" fill="#fff66d" opacity="0.8"/>
+      <rect x="38" y="20" width="8" height="8" fill="#fff66d" opacity="0.8"/>
+      <line x1="20" y1="36" x2="21" y2="36" stroke="#fff66d" stroke-width="2"/>
+    </g>`;
+  }
+
+  // Farm fields (grid of colored rectangles)
+  const fieldColors = ['#5a7828', '#8b6218', '#7db878', '#c8a428'];
+  let fields = '';
+  const fx0 = 220, fy0 = 1100;
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 5; col++) {
+      const fc = fieldColors[(row * 5 + col) % fieldColors.length];
+      fields += `<rect x="${fx0 + col*90}" y="${fy0 + row*70}" width="82" height="62" fill="${fc}" stroke="#1a0033" stroke-width="1" opacity="0.7"/>
+        <path d="M ${fx0 + col*90 + 10} ${fy0 + row*70 + 8} L ${fx0 + col*90 + 72} ${fy0 + row*70 + 8}" stroke="#1a0033" stroke-width="0.5" opacity="0.3"/>
+        <path d="M ${fx0 + col*90 + 10} ${fy0 + row*70 + 30} L ${fx0 + col*90 + 72} ${fy0 + row*70 + 30}" stroke="#1a0033" stroke-width="0.5" opacity="0.3"/>
+        <path d="M ${fx0 + col*90 + 10} ${fy0 + row*70 + 52} L ${fx0 + col*90 + 72} ${fy0 + row*70 + 52}" stroke="#1a0033" stroke-width="0.5" opacity="0.3"/>`;
+    }
+  }
+
+  // Fireflies scattered
+  const ffR = rng(43);
+  let fireflies = '';
+  for (let i = 0; i < 20; i++) {
+    const x = ffR() * W;
+    const y = 500 + ffR() * (H - 550);
+    const d = 3 + ffR() * 4;
+    fireflies += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${d.toFixed(1)}" fill="#fff66d" opacity="0.6" class="firefly">
+      <animate attributeName="opacity" values="0.2;0.9;0.2" dur="${(2 + ffR() * 3).toFixed(1)}s" repeatCount="indefinite" begin="${(ffR() * 3).toFixed(1)}s"/>
+    </circle>`;
+  }
+
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges">
+      <defs>
+        <pattern id="grassPat" width="24" height="24" patternUnits="userSpaceOnUse">
+          <rect width="24" height="24" fill="#1a3018"/>
+          <rect x="4" y="8" width="1.5" height="3" fill="#3a6a2a"/>
+          <rect x="14" y="16" width="1.5" height="3" fill="#3a6a2a"/>
+          <rect x="20" y="4" width="1.5" height="3" fill="#4a8028"/>
+        </pattern>
+        <pattern id="waterPat" width="32" height="20" patternUnits="userSpaceOnUse">
+          <rect width="32" height="20" fill="#3a80a8"/>
+          <path d="M 0 10 Q 8 6 16 10 T 32 10" fill="none" stroke="#66ddff" stroke-width="1.2" opacity="0.7"/>
+          <path d="M 0 16 Q 8 12 16 16 T 32 16" fill="none" stroke="#a0e8ff" stroke-width="0.6" opacity="0.5"/>
+        </pattern>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0a0014"/>
+          <stop offset="70%" stop-color="#1a0033"/>
+          <stop offset="100%" stop-color="#3a1058"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Sky -->
+      <rect width="${W}" height="340" fill="url(#skyGrad)"/>
+
+      <!-- Stars -->
+      <g class="stars">${stars}</g>
+
+      <!-- Moon -->
+      <circle cx="240" cy="120" r="38" fill="#fff66d" opacity="0.95"/>
+      <circle cx="230" cy="110" r="7" fill="#c89cff" opacity="0.4"/>
+      <circle cx="255" cy="130" r="5" fill="#c89cff" opacity="0.4"/>
+      <circle cx="240" cy="120" r="52" fill="none" stroke="#fff66d" stroke-width="1" opacity="0.15"/>
+
+      <!-- Distant mountain silhouette -->
+      <polygon points="${mntPts1}" fill="#3a1058"/>
+      <polygon points="${mntPts2}" fill="#5a2088"/>
+      <g class="snow-caps">${snow}</g>
+
+      <!-- Ground -->
+      <rect y="340" width="${W}" height="${H-340}" fill="url(#grassPat)"/>
+
+      <!-- Rolling hill shapes -->
+      <path d="M 0 640 Q 200 580 400 620 T 800 610 T 1200 630 T 1600 605 T 2000 620 L 2000 700 L 0 700 Z" fill="#254028" opacity="0.6"/>
+      <path d="M 0 820 Q 300 780 600 810 T 1200 795 T 1800 820 L 2000 820 L 2000 900 L 0 900 Z" fill="#2a4830" opacity="0.4"/>
+
+      <!-- River -->
+      <path d="M -50 580 Q 300 540 500 600 T 900 610 T 1300 580 T 1700 605 T 2050 590 L 2050 660 T 1700 660 T 1300 645 T 900 665 T 500 660 T -50 640 Z" fill="url(#waterPat)"/>
+
+      <!-- Bridge over river -->
+      <g transform="translate(720, 590)">
+        <rect x="0" y="-4" width="90" height="8" fill="#7a5028"/>
+        <rect x="0" y="4" width="90" height="30" fill="#c8a06c"/>
+        <line x1="10" y1="4" x2="10" y2="34" stroke="#7a5028" stroke-width="2"/>
+        <line x1="30" y1="4" x2="30" y2="34" stroke="#7a5028" stroke-width="2"/>
+        <line x1="60" y1="4" x2="60" y2="34" stroke="#7a5028" stroke-width="2"/>
+        <line x1="80" y1="4" x2="80" y2="34" stroke="#7a5028" stroke-width="2"/>
+      </g>
+
+      <!-- Path from bridge to village -->
+      <path d="M 780 630 Q 850 750 950 900" fill="none" stroke="#c8a06c" stroke-width="14" opacity="0.6"/>
+      <path d="M 780 630 Q 850 750 950 900" fill="none" stroke="#fff66d" stroke-width="1.5" stroke-dasharray="8 8" opacity="0.5"/>
+
+      <!-- Windmill on hill -->
+      <g transform="translate(400, 720)">
+        <rect x="-2" y="0" width="30" height="76" fill="#a08890" stroke="#1a0033" stroke-width="1.5"/>
+        <polygon points="-6,0 13,-20 32,0" fill="#c85040" stroke="#1a0033" stroke-width="1.5"/>
+        <circle cx="13" cy="14" r="4" fill="#fff66d"/>
+        <g transform="translate(13, 14)" class="windmill-blades">
+          <rect x="-2" y="-42" width="4" height="42" fill="#fff9d0" stroke="#1a0033" stroke-width="1"/>
+          <rect x="0" y="-2" width="42" height="4" fill="#fff9d0" stroke="#1a0033" stroke-width="1"/>
+          <rect x="-2" y="0" width="4" height="42" fill="#fff9d0" stroke="#1a0033" stroke-width="1"/>
+          <rect x="-42" y="-2" width="42" height="4" fill="#fff9d0" stroke="#1a0033" stroke-width="1"/>
+          <animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="18s" repeatCount="indefinite"/>
+        </g>
+        <rect x="10" y="52" width="10" height="16" fill="#4a2810"/>
+      </g>
+
+      <!-- Farm fields (bottom right) -->
+      <g class="fields">${fields}</g>
+
+      <!-- Farmhouse near fields -->
+      <g transform="translate(180, 1080)">
+        <rect x="0" y="12" width="42" height="30" fill="#c8a06c" stroke="#1a0033" stroke-width="1.5"/>
+        <polygon points="-3,12 21,-6 45,12" fill="#c85040" stroke="#1a0033" stroke-width="1.5"/>
+        <rect x="16" y="24" width="10" height="18" fill="#4a2810" stroke="#1a0033" stroke-width="1"/>
+        <rect x="4" y="18" width="7" height="6" fill="#fff66d" opacity="0.8"/>
+        <rect x="31" y="18" width="7" height="6" fill="#fff66d" opacity="0.8"/>
+      </g>
+
+      <!-- Central plaza well -->
+      <g transform="translate(1100, 950)">
+        <ellipse cx="0" cy="0" rx="14" ry="4" fill="#1a0033"/>
+        <rect x="-12" y="-30" width="24" height="30" fill="#7a5028" stroke="#1a0033" stroke-width="1.5"/>
+        <rect x="-14" y="-32" width="28" height="4" fill="#4a2810"/>
+        <rect x="-2" y="-45" width="4" height="20" fill="#c89cff"/>
+        <path d="M -12 -50 L 12 -50 L 8 -40 L -8 -40 Z" fill="#5a2088" stroke="#1a0033" stroke-width="1.5"/>
+      </g>
+
+      <!-- Trees scattered -->
+      <g class="trees">${trees}</g>
+
+      <!-- Big central shrine (Throng temple) -->
+      <g transform="translate(1400, 800)">
+        <rect x="-40" y="0" width="80" height="60" fill="#c89cff" stroke="#1a0033" stroke-width="2"/>
+        <polygon points="-48,0 0,-40 48,0" fill="#5a2088" stroke="#1a0033" stroke-width="2"/>
+        <rect x="-8" y="20" width="16" height="40" fill="#1a0033"/>
+        <circle cx="0" cy="35" r="5" fill="#fff66d" opacity="0.9">
+          <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" repeatCount="indefinite"/>
+        </circle>
+        <rect x="-32" y="60" width="64" height="8" fill="#7a5028" stroke="#1a0033" stroke-width="1.5"/>
+        <rect x="-38" y="68" width="76" height="6" fill="#4a2810"/>
+      </g>
+
+      <!-- Fireflies -->
+      <g class="fireflies">${fireflies}</g>
+
+      <!-- Vignette overlay -->
+      <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+        <stop offset="60%" stop-color="rgba(0,0,0,0)"/>
+        <stop offset="100%" stop-color="rgba(10,0,20,0.7)"/>
+      </radialGradient>
+      <rect width="${W}" height="${H}" fill="url(#vignette)"/>
+    </svg>
+  `;
+}
+
+function renderUniverse() {
+  const wrap = document.getElementById('universeMapWrap');
+  const map = document.getElementById('universeMap');
+  if (!wrap || !map) return;
+  universeWrapEl = wrap;
+  universeMapEl = map;
+
+  // Build the map SVG once
+  if (!universeBuilt) {
+    map.innerHTML = buildUniverseMapSVG();
+    map.style.width = UNIVERSE_MAP_W + 'px';
+    map.style.height = UNIVERSE_MAP_H + 'px';
+    universeBuilt = true;
+    setupUniversePan();
+    // Start centered
+    universePan.x = -(UNIVERSE_MAP_W / 2 - wrap.clientWidth / 2);
+    universePan.y = -(UNIVERSE_MAP_H / 2 - wrap.clientHeight / 2);
+    applyUniversePan();
+  }
+
+  // Remove any previous thronglets
+  map.querySelectorAll('.uni-throng, .uni-bubble').forEach(el => el.remove());
+  universeThrongs = [];
+
+  // Gather all thronglets across all months (dedupe suscri recurring — show only original)
+  const all = state.expenses.filter(e => e.type !== 'settlement');
+  const monthsSet = new Set(all.map(e => monthKey(new Date(e.timestamp))));
+  document.getElementById('universeTotal').textContent = all.length;
+  document.getElementById('universeMonths').textContent = monthsSet.size;
+
+  // Position seeded by expense.id so positions are stable across renders
+  const idHash = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h * 31) + s.charCodeAt(i)) >>> 0; return h; };
+
+  for (const e of all) {
+    const papa = getPapaById(e.papaId);
+    if (!papa) continue;
+    const size = Math.min(72, Math.max(38, 32 + Math.sqrt(e.amount) * 2));
+    const h = idHash(e.id);
+    // Avoid sky area (< 380) and edge margins
+    const x = 100 + ((h & 0xffff) / 0xffff) * (UNIVERSE_MAP_W - size - 200);
+    const y = 400 + ((h >>> 16) / 0xffff) * (UNIVERSE_MAP_H - 460);
+    const angle = ((h >>> 8) & 0xff) / 255 * Math.PI * 2;
+    const speed = 0.15 + Math.random() * 0.25;
+
+    const tutorColor = e.tutor === 'Isi' ? '#00d4ff' : '#ff9933';
+    const el = document.createElement('div');
+    el.className = `uni-throng ${papa.cls}` + (e.bornSick ? ' sick' : '');
+    el.style.width = size + 'px';
+    el.style.height = size + 'px';
+    el.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    el.style.setProperty('--tutor-color', tutorColor);
+    el.dataset.expenseId = e.id;
+    el.dataset.tutor = e.tutor.toLowerCase();
+    const eMonth = monthKey(new Date(e.timestamp));
+    el.innerHTML = `
+      <div class="mini-tag">${e.name.substring(0,14)}</div>
+      <div class="mini-frame"><img class="sprite" src="${SPRITES[papa.sprite] || SPRITES.A_think}" alt=""></div>
+      <div class="uni-month">${eMonth}</div>
+    `;
+    el.addEventListener('click', (ev) => {
+      if (universeDrag && universeDrag.moved) return; // don't fire click after drag
+      ev.stopPropagation();
+      tellStory(e, el);
+    });
+    map.appendChild(el);
+    universeThrongs.push({
+      el, expense: e, x, y, size,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      stopUntil: 0
+    });
+  }
+}
+
+function tickUniverse() {
+  if (currentView !== 'universe' || document.hidden) return;
+  const now = Date.now();
+  const MARGIN_X = 60, TOP_MARGIN = 380, BOT_MARGIN = 40;
+  for (const t of universeThrongs) {
+    if (now < t.stopUntil) continue;
+    if (Math.random() < 0.015) {
+      t.vx += (Math.random() - 0.5) * 0.3;
+      t.vy += (Math.random() - 0.5) * 0.3;
+    }
+    t.vx *= 0.988; t.vy *= 0.988;
+    const sp = Math.hypot(t.vx, t.vy);
+    if (sp > 1.0) { t.vx = (t.vx/sp) * 1.0; t.vy = (t.vy/sp) * 1.0; }
+    if (sp < 0.08) {
+      const a = Math.random() * Math.PI * 2;
+      t.vx += Math.cos(a) * 0.12;
+      t.vy += Math.sin(a) * 0.12;
+    }
+    t.x += t.vx; t.y += t.vy;
+    if (t.x < MARGIN_X) { t.x = MARGIN_X; t.vx = Math.abs(t.vx); }
+    if (t.x > UNIVERSE_MAP_W - t.size - MARGIN_X) { t.x = UNIVERSE_MAP_W - t.size - MARGIN_X; t.vx = -Math.abs(t.vx); }
+    if (t.y < TOP_MARGIN) { t.y = TOP_MARGIN; t.vy = Math.abs(t.vy); }
+    if (t.y > UNIVERSE_MAP_H - t.size - BOT_MARGIN) { t.y = UNIVERSE_MAP_H - t.size - BOT_MARGIN; t.vy = -Math.abs(t.vy); }
+    t.el.style.transform = `translate3d(${t.x.toFixed(1)}px, ${t.y.toFixed(1)}px, 0)`;
+  }
+  // Collision-driven duets, throttled and rare (there could be 500+ throngs)
+  if (now - universeLastCollisionCheck > 500) {
+    universeLastCollisionCheck = now;
+    detectUniverseCollisions(now);
+  }
+}
+function detectUniverseCollisions(now) {
+  // Cheap grid partition to avoid O(n²) with many throngs
+  const CELL = 100;
+  const grid = new Map();
+  for (const t of universeThrongs) {
+    const k = ((t.x / CELL) | 0) + '_' + ((t.y / CELL) | 0);
+    if (!grid.has(k)) grid.set(k, []);
+    grid.get(k).push(t);
+  }
+  for (const [key, bucket] of grid) {
+    if (bucket.length < 2) continue;
+    for (let i = 0; i < bucket.length; i++) {
+      for (let j = i + 1; j < bucket.length; j++) {
+        const a = bucket[i], b = bucket[j];
+        const dist = Math.hypot(a.x - b.x, a.y - b.y);
+        if (dist < (a.size + b.size) / 2 - 4) {
+          const nx = (a.x - b.x) / (dist || 1);
+          const ny = (a.y - b.y) / (dist || 1);
+          a.vx += nx * 0.2; a.vy += ny * 0.2;
+          b.vx -= nx * 0.2; b.vy -= ny * 0.2;
+          // Random rare duet
+          if (Math.random() < 0.05) {
+            a.stopUntil = now + 800; b.stopUntil = now + 800;
+            try { playDuet(a, b); } catch (e) {}
+          }
+        }
+      }
+    }
+  }
+}
+function startUniverseTick() {
+  if (universeRaf) return;
+  const loop = () => {
+    tickUniverse();
+    if (currentView === 'universe' && !document.hidden) universeRaf = requestAnimationFrame(loop);
+    else universeRaf = null;
+  };
+  universeRaf = requestAnimationFrame(loop);
+}
+function stopUniverseTick() {
+  if (universeRaf) cancelAnimationFrame(universeRaf);
+  universeRaf = null;
+}
+
+function applyUniversePan() {
+  if (!universeMapEl || !universeWrapEl) return;
+  // Clamp so the map can't be dragged off the visible area entirely
+  const wrap = universeWrapEl;
+  const minX = Math.min(0, wrap.clientWidth - UNIVERSE_MAP_W);
+  const minY = Math.min(0, wrap.clientHeight - UNIVERSE_MAP_H);
+  if (universePan.x > 0) universePan.x = 0;
+  if (universePan.y > 0) universePan.y = 0;
+  if (universePan.x < minX) universePan.x = minX;
+  if (universePan.y < minY) universePan.y = minY;
+  universeMapEl.style.transform = `translate3d(${universePan.x}px, ${universePan.y}px, 0)`;
+}
+
+function setupUniversePan() {
+  const wrap = universeWrapEl;
+  if (!wrap) return;
+  const onDown = (e) => {
+    // Don't start pan drag on a thronglet click
+    if (e.target.closest('.uni-throng')) return;
+    const pt = e.touches ? e.touches[0] : e;
+    universeDrag = {
+      startX: pt.clientX, startY: pt.clientY,
+      panX: universePan.x, panY: universePan.y,
+      moved: false
+    };
+    wrap.classList.add('grabbing');
+  };
+  const onMove = (e) => {
+    if (!universeDrag) return;
+    const pt = e.touches ? e.touches[0] : e;
+    const dx = pt.clientX - universeDrag.startX;
+    const dy = pt.clientY - universeDrag.startY;
+    if (!universeDrag.moved && Math.hypot(dx, dy) > 4) universeDrag.moved = true;
+    universePan.x = universeDrag.panX + dx;
+    universePan.y = universeDrag.panY + dy;
+    applyUniversePan();
+    if (e.touches) e.preventDefault();
+  };
+  const onUp = () => {
+    if (universeDrag) {
+      setTimeout(() => { universeDrag = null; }, 50);
+      wrap.classList.remove('grabbing');
+    }
+  };
+  wrap.addEventListener('mousedown', onDown);
+  wrap.addEventListener('mousemove', onMove);
+  wrap.addEventListener('mouseup', onUp);
+  wrap.addEventListener('mouseleave', onUp);
+  wrap.addEventListener('touchstart', onDown, { passive: true });
+  wrap.addEventListener('touchmove', onMove, { passive: false });
+  wrap.addEventListener('touchend', onUp);
+}
+
 
 /* ============================================
    11b. MANDELBROT BACKGROUND (settled worlds)
@@ -2679,27 +3173,101 @@ function saveSettings() {
   chime();
   speak('PLOK-MOK!', t('speak.settings_saved'));
 }
-function wipeAll() {
-  if (!confirm(t('confirm.wipe_all_1'))) return;
-  if (!confirm(t('confirm.wipe_all_2'))) return;
-  const allIds = state.expenses.map(e => e.id);
-  state.expenses = []; save();
-  cloudDeleteExpensesByIds(allIds);
-  alertCry(); setTimeout(chitter, 200);
-  rebuildConceptHints();
-  renderColony(); renderDeudas(); renderWorld();
+/* Sacrifice modal — typed keyword confirmation + optional auto-backup.
+   Used for both "wipe current month" and "wipe all". */
+let sacrificeCtx = null; // { scope: 'month'|'all', ids: [], keyword: str, onConfirm: fn }
+
+function openSacrificeModal(scope) {
+  const isAll = scope === 'all';
+  let ids, warn, count, first, last, keyword;
+  if (isAll) {
+    const all = state.expenses.slice().sort((a,b) => a.timestamp - b.timestamp);
+    ids = all.map(e => e.id);
+    count = all.length;
+    if (count === 0) { alert(t('sacrifice.no_data')); return; }
+    first = new Date(all[0].timestamp).toLocaleDateString();
+    last  = new Date(all[all.length-1].timestamp).toLocaleDateString();
+    keyword = t('sacrifice.keyword_all');
+    warn = t('sacrifice.warn_all', { count });
+  } else {
+    const key = monthKey(new Date());
+    const monthList = state.expenses
+      .filter(e => monthKey(new Date(e.timestamp)) === key)
+      .sort((a,b) => a.timestamp - b.timestamp);
+    ids = monthList.map(e => e.id);
+    count = monthList.length;
+    if (count === 0) { alert(t('sacrifice.no_data')); return; }
+    first = new Date(monthList[0].timestamp).toLocaleDateString();
+    last  = new Date(monthList[monthList.length-1].timestamp).toLocaleDateString();
+    keyword = t('sacrifice.keyword_month');
+    warn = t('sacrifice.warn_month', { count, month: monthLabel(key) });
+  }
+  sacrificeCtx = {
+    scope, ids, keyword,
+    onConfirm: () => {
+      if (isAll) {
+        state.expenses = [];
+      } else {
+        const idSet = new Set(ids);
+        state.expenses = state.expenses.filter(e => !idSet.has(e.id));
+      }
+      save();
+      alertCry(); setTimeout(chitter, 200);
+      rebuildConceptHints();
+      renderColony(); renderDeudas();
+      if (currentView === 'world') renderWorld();
+      if (currentView === 'universe') renderUniverse && renderUniverse();
+      if (currentView === 'stats') renderStats();
+    }
+  };
+  const inp = document.getElementById('sacrificeInput');
+  const confirmBtn = document.getElementById('sacrificeConfirm');
+  const kwEl = document.getElementById('sacrificeKeyword');
+  const warnEl = document.getElementById('sacrificeWarn');
+  const countEl = document.getElementById('sacrificeCount');
+  const backupChk = document.getElementById('sacrificeBackup');
+  if (inp) inp.value = '';
+  if (confirmBtn) confirmBtn.disabled = true;
+  if (kwEl) kwEl.textContent = keyword;
+  if (warnEl) warnEl.textContent = warn;
+  if (countEl) countEl.textContent = t('sacrifice.count_summary', { count, first, last });
+  if (backupChk) backupChk.checked = true;
+  const inpPlaceholder = document.getElementById('sacrificeInput');
+  if (inpPlaceholder) inpPlaceholder.placeholder = keyword;
+  document.getElementById('sacrificeModal').hidden = false;
+  setTimeout(() => inp && inp.focus(), 50);
+  beep(500);
 }
-function resetMonthBtn() {
-  const key = monthKey(new Date());
-  if (!confirm(t('confirm.wipe_month', { month: monthLabel(key) }))) return;
-  const removed = state.expenses.filter(e => monthKey(new Date(e.timestamp)) === key).map(e => e.id);
-  state.expenses = state.expenses.filter(e => monthKey(new Date(e.timestamp)) !== key);
-  save();
-  cloudDeleteExpensesByIds(removed);
-  alertCry(); setTimeout(chitter, 200);
-  rebuildConceptHints();
-  renderColony(); renderDeudas(); renderWorld();
+function closeSacrificeModal() {
+  document.getElementById('sacrificeModal').hidden = true;
+  sacrificeCtx = null;
 }
+function onSacrificeInput() {
+  if (!sacrificeCtx) return;
+  const inp = document.getElementById('sacrificeInput');
+  const btn = document.getElementById('sacrificeConfirm');
+  const typed = (inp?.value || '').trim().toUpperCase();
+  const ok = typed === sacrificeCtx.keyword;
+  if (btn) btn.disabled = !ok;
+}
+function confirmSacrifice() {
+  if (!sacrificeCtx) return;
+  const inp = document.getElementById('sacrificeInput');
+  const typed = (inp?.value || '').trim().toUpperCase();
+  if (typed !== sacrificeCtx.keyword) return;
+  const backupFirst = document.getElementById('sacrificeBackup')?.checked;
+  const ctx = sacrificeCtx;
+  closeSacrificeModal();
+  if (backupFirst) {
+    try { exportData(); } catch (e) { console.warn('auto-backup before sacrifice failed', e); }
+    // Give the browser a moment to trigger the download before mutating state
+    setTimeout(() => ctx.onConfirm(), 400);
+  } else {
+    ctx.onConfirm();
+  }
+}
+function wipeAll() { openSacrificeModal('all'); }
+function resetMonthBtn() { openSacrificeModal('month'); }
 
 /* ============================================
    18. EXPORT / IMPORT
@@ -2711,26 +3279,109 @@ function isMobileViewport() { return window.matchMedia('(max-width: 600px)').mat
    ============================================ */
 let bgMusicEl = null;
 let bgMusicStarted = false;
+let bgMusicUnlockBound = false;
 
 function initBackgroundMusic() {
   bgMusicEl = document.getElementById('bgMusic');
   if (!bgMusicEl) return;
+  // Use unencoded path; the browser URL-encodes for the fetch. Safer across engines.
   bgMusicEl.src = BGM_FILE;
+  bgMusicEl.loop = true;
+  bgMusicEl.preload = 'auto';
   bgMusicEl.volume = state.settings.musicVolume ?? 0.4;
+  bgMusicEl.load();
+  // Diagnostic listeners
+  bgMusicEl.addEventListener('error', () => {
+    console.warn('BGM error', bgMusicEl.error);
+    setMusicStatus('error');
+  });
+  bgMusicEl.addEventListener('play', () => setMusicStatus('playing'));
+  bgMusicEl.addEventListener('pause', () => {
+    if (!bgMusicEl.ended && state.settings.musicPlaying !== false) setMusicStatus('paused');
+  });
 }
+
+function bindUnlockGesture() {
+  if (bgMusicUnlockBound) return;
+  bgMusicUnlockBound = true;
+  const tryUnlock = () => {
+    if (!bgMusicEl || bgMusicStarted) return;
+    if (state.settings.musicPlaying === false) return;
+    bgMusicEl.play().then(() => {
+      bgMusicStarted = true;
+      setMusicStatus('playing');
+      cleanup();
+    }).catch(() => { /* still blocked, keep listening */ });
+  };
+  const cleanup = () => {
+    document.removeEventListener('click', tryUnlock, true);
+    document.removeEventListener('touchend', tryUnlock, true);
+    document.removeEventListener('keydown', tryUnlock, true);
+    bgMusicUnlockBound = false;
+  };
+  document.addEventListener('click', tryUnlock, true);
+  document.addEventListener('touchend', tryUnlock, true);
+  document.addEventListener('keydown', tryUnlock, true);
+}
+
 function startBackgroundMusic() {
-  if (!bgMusicEl || bgMusicStarted) return;
-  if (state.settings.musicPlaying === false) return;
+  if (!bgMusicEl) return;
+  if (state.settings.musicPlaying === false) { setMusicStatus('off'); return; }
   bgMusicEl.volume = state.settings.musicVolume ?? 0.4;
-  bgMusicEl.play().then(() => { bgMusicStarted = true; }).catch(e => console.warn('bgm autoplay', e));
+  // Play with a promise-safe retry chain: fresh attempt, then on-gesture unlock
+  const attempt = () => bgMusicEl.play()
+    .then(() => { bgMusicStarted = true; setMusicStatus('playing'); })
+    .catch(err => {
+      console.warn('bgm play failed, will unlock on gesture:', err?.name || err);
+      setMusicStatus('blocked');
+      bindUnlockGesture();
+    });
+  // If we're already inside a click handler, this succeeds immediately.
+  attempt();
 }
-function pauseBackgroundMusic() { if (bgMusicEl) bgMusicEl.pause(); }
+function pauseBackgroundMusic() {
+  if (bgMusicEl) bgMusicEl.pause();
+  setMusicStatus('off');
+}
 function resumeBackgroundMusic() {
   if (!bgMusicEl) return;
   bgMusicEl.volume = state.settings.musicVolume ?? 0.4;
-  bgMusicEl.play().then(() => { bgMusicStarted = true; }).catch(()=>{});
+  bgMusicEl.play()
+    .then(() => { bgMusicStarted = true; setMusicStatus('playing'); })
+    .catch(err => {
+      console.warn('bgm resume failed:', err?.name || err);
+      setMusicStatus('blocked');
+      bindUnlockGesture();
+    });
 }
 function setMusicVolume(v) { if (bgMusicEl) bgMusicEl.volume = Math.max(0, Math.min(1, v)); }
+
+function setMusicStatus(status) {
+  // Reflect state in AJUSTES so user sees why music isn't playing
+  const dot = document.getElementById('musicStatusDot');
+  const label = document.getElementById('musicStatusLabel');
+  const btn = document.getElementById('musicManualStart');
+  if (!dot || !label) return;
+  dot.className = 'music-status-dot ' + status;
+  const messages = {
+    playing: 'reproduciendo',
+    paused: 'pausada',
+    off: 'apagada',
+    blocked: 'bloqueada por autoplay — toca la pantalla',
+    error: 'error cargando el archivo',
+    idle: 'aún no ha sonado'
+  };
+  const msgEn = {
+    playing: 'playing',
+    paused: 'paused',
+    off: 'off',
+    blocked: 'blocked by autoplay — tap the screen',
+    error: 'file load error',
+    idle: 'not started yet'
+  };
+  label.textContent = (currentLang() === 'en' ? msgEn : messages)[status] || status;
+  if (btn) btn.hidden = !(status === 'blocked' || status === 'idle' || status === 'error');
+}
 
 /* ============================================
    END-OF-MONTH SPENDING PROJECTION
@@ -3089,58 +3740,12 @@ function handleImportFile(file) {
       if (currentView === 'stats') renderStats();
       chime();
       speak('KRII-MOK!', t('speak.thronglets_awakened', { n: state.expenses.length }));
-      if (cloudConnected) {
-        await pushAllLocalToCloud();
-        speak('PLOK-MOK!', t('speak.imported_synced'));
-      }
     } catch (err) {
       alert(t('alert.import_error', { msg: err.message }));
     }
   };
   reader.readAsText(file);
 }
-
-async function pushAllLocalToCloud() {
-  if (!cloudConnected || !supabaseClient) return;
-  const { household } = getCloudCreds();
-  if (!household) return;
-  try {
-    // Borrar de la nube lo que ya no existe localmente
-    const [expRes, papasRes] = await Promise.all([
-      supabaseClient.from('expenses').select('id').eq('household_id', household),
-      supabaseClient.from('papas').select('id').eq('household_id', household)
-    ]);
-    const cloudExpIds = new Set((expRes.data || []).map(r => r.id));
-    const cloudPapaIds = new Set((papasRes.data || []).map(r => r.id));
-    const localExpIds = new Set(state.expenses.map(e => e.id));
-    const localPapaIds = new Set(state.papas.map(p => p.id));
-    const expsToDelete = [...cloudExpIds].filter(id => !localExpIds.has(id));
-    const papasToDelete = [...cloudPapaIds].filter(id => !localPapaIds.has(id));
-    if (expsToDelete.length > 0) {
-      expsToDelete.forEach(id => ignoreEcho.add('e:DELETE:' + id));
-      await supabaseClient.from('expenses').delete().eq('household_id', household).in('id', expsToDelete);
-    }
-    if (papasToDelete.length > 0) {
-      papasToDelete.forEach(id => ignoreEcho.add('p:DELETE:' + id));
-      await supabaseClient.from('papas').delete().eq('household_id', household).in('id', papasToDelete);
-    }
-    // Subir todo lo local
-    if (state.expenses.length > 0) {
-      state.expenses.forEach(e => { ignoreEcho.add('e:INSERT:' + e.id); ignoreEcho.add('e:UPDATE:' + e.id); });
-      await supabaseClient.from('expenses').upsert(state.expenses.map(expenseToRow));
-    }
-    if (state.papas.length > 0) {
-      state.papas.forEach(p => { ignoreEcho.add('p:INSERT:' + p.id); ignoreEcho.add('p:UPDATE:' + p.id); });
-      await supabaseClient.from('papas').upsert(state.papas.map(papaToRow));
-    }
-    ignoreEcho.add('s');
-    await supabaseClient.from('app_settings').upsert(settingsRowOut());
-  } catch (e) {
-    console.warn('pushAllLocalToCloud', e);
-    alert(t('alert.post_import_cloud'));
-  }
-}
-
 /* ============================================
    19. AUTOCOMPLETE (concepto) + AUTO-SUGGEST PAPA
    ============================================ */
@@ -3290,6 +3895,14 @@ function bindEvents() {
     if (e.target.checked) resumeBackgroundMusic();
     else pauseBackgroundMusic();
   });
+  const musicManualBtn = document.getElementById('musicManualStart');
+  if (musicManualBtn) musicManualBtn.addEventListener('click', () => {
+    state.settings.musicPlaying = true;
+    const chk = document.getElementById('musicPlaying');
+    if (chk) chk.checked = true;
+    bgMusicStarted = false;
+    startBackgroundMusic();
+  });
 
   // Templo del Ahorro
   document.getElementById('addGoalBtn').addEventListener('click', () => openGoalModal(null));
@@ -3312,6 +3925,16 @@ function bindEvents() {
   document.getElementById('saveSettings').addEventListener('click', saveSettings);
   document.getElementById('wipeAllBtn').addEventListener('click', wipeAll);
   document.getElementById('resetMonthBtn').addEventListener('click', resetMonthBtn);
+  document.getElementById('sacrificeClose').addEventListener('click', closeSacrificeModal);
+  document.getElementById('sacrificeCancel').addEventListener('click', closeSacrificeModal);
+  document.getElementById('sacrificeConfirm').addEventListener('click', confirmSacrifice);
+  document.getElementById('sacrificeInput').addEventListener('input', onSacrificeInput);
+  document.getElementById('sacrificeInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !document.getElementById('sacrificeConfirm').disabled) confirmSacrifice();
+  });
+  document.getElementById('sacrificeModal').addEventListener('click', (e) => {
+    if (e.target.id === 'sacrificeModal') closeSacrificeModal();
+  });
 
   document.getElementById('exportBtn').addEventListener('click', exportData);
   document.getElementById('importBtn').addEventListener('click', triggerImport);
@@ -3399,7 +4022,8 @@ function bindEvents() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      if (!document.getElementById('editModal').hidden) closeEditModal();
+      if (!document.getElementById('sacrificeModal').hidden) closeSacrificeModal();
+      else if (!document.getElementById('editModal').hidden) closeEditModal();
       else if (!document.getElementById('papaModal').hidden) closePapaModal();
       else if (!document.getElementById('settleModal').hidden) closeSettleModal();
       else if (!document.getElementById('goalModal').hidden) closeGoalModal();
@@ -3415,498 +4039,40 @@ function bindEvents() {
 }
 
 /* ============================================
-   22. CLOUD SYNC (Supabase)
+   22. CLOUD SYNC — REMOVED in v2.0
+   ─────────────────────────────────────────────
+   All cloud/Supabase code was removed. The app is purely local now.
+   These no-op stubs preserve legacy call sites so nothing throws.
    ============================================ */
-const CLOUD_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js';
-const SB_URL_KEY = 'thrungs-sb-url';
-const SB_KEY_KEY = 'thrungs-sb-key';
-const SB_HH_KEY  = 'thrungs-sb-household';
-
-let supabaseClient = null;
-let cloudConnected = false;
-let realtimeChannel = null;
-const ignoreEcho = new Set(); // mute realtime echo of our own writes
-
-function getCloudCreds() {
-  return {
-    url: localStorage.getItem(SB_URL_KEY) || '',
-    key: localStorage.getItem(SB_KEY_KEY) || '',
-    household: localStorage.getItem(SB_HH_KEY) || ''
-  };
-}
-function setCloudCreds({ url, key, household }) {
-  if (url !== undefined) { url ? localStorage.setItem(SB_URL_KEY, url) : localStorage.removeItem(SB_URL_KEY); }
-  if (key !== undefined) { key ? localStorage.setItem(SB_KEY_KEY, key) : localStorage.removeItem(SB_KEY_KEY); }
-  if (household !== undefined) { household ? localStorage.setItem(SB_HH_KEY, household) : localStorage.removeItem(SB_HH_KEY); }
-}
-
-async function loadCloudSDK() {
-  if (window.supabase) return;
-  await new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = CLOUD_SDK_URL;
-    s.crossOrigin = 'anonymous';
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('No se pudo cargar Supabase SDK (¿offline?)'));
-    document.head.appendChild(s);
-  });
-}
-
-function uuid() {
-  if (crypto?.randomUUID) return crypto.randomUUID();
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
-}
-
-function updateCloudUI(status, msg) {
-  const pill = document.getElementById('cloudPill');
-  const statusEl = document.getElementById('cloudStatus');
-  const householdEl = document.getElementById('cloudHousehold');
-  const inviteBtn = document.getElementById('inviteBtn');
-  const disconnectBtn = document.getElementById('disconnectBtn');
-  const connectBtn = document.getElementById('connectBtn');
-  const { household, url, key } = getCloudCreds();
-
-  if (pill) {
-    pill.classList.remove('cloud-online', 'cloud-syncing', 'cloud-offline', 'cloud-error');
-    if (status === 'connected')      { pill.classList.add('cloud-online');  pill.textContent = t('cloud.live'); }
-    else if (status === 'connecting'){ pill.classList.add('cloud-syncing'); pill.textContent = t('cloud.connecting'); }
-    else if (status === 'error')     { pill.classList.add('cloud-error');   pill.textContent = t('cloud.error'); }
-    else                              { pill.classList.add('cloud-offline'); pill.textContent = t('cloud.local'); }
-  }
-  if (statusEl) {
-    statusEl.textContent = status === 'connected' ? t('cloud.status.connected')
-                         : status === 'connecting' ? t('cloud.status.connecting')
-                         : status === 'error' ? t('cloud.status.error', { msg: msg || '?' })
-                         : t('cloud.status.disconnected');
-  }
-  if (householdEl) householdEl.textContent = household || t('pwa.dash');
-  if (document.getElementById('cloudUrl') && !document.getElementById('cloudUrl').value) document.getElementById('cloudUrl').value = url;
-  if (document.getElementById('cloudKey') && !document.getElementById('cloudKey').value) document.getElementById('cloudKey').value = key;
-  if (inviteBtn) inviteBtn.disabled = status !== 'connected';
-  if (disconnectBtn) disconnectBtn.disabled = status !== 'connected';
-  if (connectBtn) connectBtn.textContent = status === 'connected' ? t('cloud.connected_btn') : t('cloud.connect');
-}
-function flashCloud() {
-  const pill = document.getElementById('cloudPill');
-  if (!pill || !cloudConnected) return;
-  pill.classList.remove('flash');
-  void pill.offsetWidth;
-  pill.classList.add('flash');
-}
-
-/* === Row conversions === */
-function expenseToRow(e) {
-  const { household } = getCloudCreds();
-  return {
-    id: e.id, household_id: household,
-    papa_id: e.papaId, name: e.name, amount: e.amount,
-    tutor: e.tutor, ts: e.timestamp, born_sick: !!e.bornSick,
-    split: e.split || null, type: e.type || 'expense',
-    from_tutor: e.fromTutor || null, to_tutor: e.toTutor || null,
-    updated_at: new Date().toISOString()
-  };
-}
-function rowToExpense(r) {
-  return {
-    id: r.id, papaId: r.papa_id, name: r.name, amount: parseFloat(r.amount),
-    tutor: r.tutor, timestamp: parseInt(r.ts, 10),
-    bornSick: !!r.born_sick, split: r.split,
-    type: r.type || 'expense',
-    fromTutor: r.from_tutor || undefined,
-    toTutor: r.to_tutor || undefined
-  };
-}
-function papaToRow(p, idx) {
-  const { household } = getCloudCreds();
-  return {
-    id: p.id, household_id: household, name: p.name, cls: p.cls,
-    budget: p.budget, sprite: p.sprite, position: idx,
-    updated_at: new Date().toISOString()
-  };
-}
-function rowToPapa(r) {
-  return { id: r.id, name: r.name, cls: r.cls, budget: parseFloat(r.budget), sprite: r.sprite };
-}
-function goalToRow(g) {
-  const { household } = getCloudCreds();
-  return {
-    id: g.id, household_id: household,
-    name: g.name, target: g.target, deadline: g.deadline || null,
-    emoji: g.emoji || null, created_at: g.createdAt || Date.now(),
-    contributions: g.contributions || [],
-    updated_at: new Date().toISOString()
-  };
-}
-function rowToGoal(r) {
-  return {
-    id: r.id, name: r.name,
-    target: parseFloat(r.target),
-    deadline: r.deadline || null,
-    emoji: r.emoji || '🏖',
-    createdAt: parseInt(r.created_at, 10) || Date.now(),
-    contributions: Array.isArray(r.contributions) ? r.contributions : []
-  };
-}
-function settingsRowOut() {
-  const { household } = getCloudCreds();
-  return {
-    household_id: household,
-    split_model: state.settings.splitModel,
-    master_volume: state.settings.masterVolume,
-    world_chatter: state.settings.worldChatter,
-    last_visited_month: state.settings.lastVisitedMonth || null,
-    updated_at: new Date().toISOString()
-  };
-}
-function settingsRowIn(r) {
-  return {
-    splitModel: r.split_model,
-    masterVolume: parseFloat(r.master_volume),
-    worldChatter: r.world_chatter,
-    lastVisitedMonth: r.last_visited_month || null
-  };
-}
-
-/* === Connect / Disconnect === */
-async function connectCloud(creds) {
-  const url = creds?.url ?? localStorage.getItem(SB_URL_KEY);
-  const key = creds?.key ?? localStorage.getItem(SB_KEY_KEY);
-  let household = creds?.household ?? localStorage.getItem(SB_HH_KEY);
-  if (!url || !key) { updateCloudUI('error', 'Faltan URL o KEY'); return false; }
-  try {
-    updateCloudUI('connecting');
-    await loadCloudSDK();
-    supabaseClient = window.supabase.createClient(url, key, {
-      realtime: { params: { eventsPerSecond: 10 } }
-    });
-    if (!household) {
-      const newId = uuid();
-      const { error } = await supabaseClient.from('households').insert({ id: newId });
-      if (error && !String(error.message || '').includes('duplicate')) throw error;
-      household = newId;
-    }
-    setCloudCreds({ url, key, household });
-    cloudConnected = true;
-    await mergeWithCloud();
-    setupRealtime(household);
-    updateCloudUI('connected');
-    return true;
-  } catch (err) {
-    console.error('connectCloud', err);
-    cloudConnected = false;
-    supabaseClient = null;
-    updateCloudUI('error', err.message);
-    return false;
-  }
-}
-function disconnectCloud() {
-  if (realtimeChannel && supabaseClient) supabaseClient.removeChannel(realtimeChannel);
-  realtimeChannel = null;
-  supabaseClient = null;
-  cloudConnected = false;
-  updateCloudUI('disconnected');
-  speak('PONG...', t('speak.cloud_disconnected'), '');
-}
-
-/* === Merge on connect: cloud wins on conflicts, local-only items get pushed === */
-async function mergeWithCloud() {
-  if (!supabaseClient) return;
-  const { household } = getCloudCreds();
-  if (!household) return;
-  // Goals table may not exist yet if user hasn't run the v2 migration — request gracefully
-  const [expRes, papasRes, settingsRes, goalsRes] = await Promise.all([
-    supabaseClient.from('expenses').select('*').eq('household_id', household),
-    supabaseClient.from('papas').select('*').eq('household_id', household).order('position'),
-    supabaseClient.from('app_settings').select('*').eq('household_id', household).maybeSingle(),
-    supabaseClient.from('goals').select('*').eq('household_id', household)
-      .then(r => r, err => ({ data: null, error: err }))
-  ]);
-  if (expRes.error) throw expRes.error;
-  if (papasRes.error) throw papasRes.error;
-
-  const cloudExpenses = (expRes.data || []).map(rowToExpense);
-  const cloudPapas = (papasRes.data || []).map(rowToPapa);
-
-  // Expenses merge: cloud wins, push local-only
-  const cloudExpIds = new Set(cloudExpenses.map(e => e.id));
-  const localOnlyExp = state.expenses.filter(e => !cloudExpIds.has(e.id));
-  state.expenses = [...cloudExpenses, ...localOnlyExp];
-
-  if (cloudPapas.length > 0) {
-    const cloudPapaIds = new Set(cloudPapas.map(p => p.id));
-    const localOnlyPapas = state.papas.filter(p => !cloudPapaIds.has(p.id));
-    state.papas = [...cloudPapas, ...localOnlyPapas].slice(0, MAX_PAPAS);
-  }
-  if (settingsRes.data) state.settings = Object.assign({}, state.settings, settingsRowIn(settingsRes.data));
-
-  // Goals merge (only if the table exists / migration was run)
-  let goalsAvailable = false;
-  let localOnlyGoals = [];
-  if (goalsRes && !goalsRes.error) {
-    goalsAvailable = true;
-    const cloudGoals = (goalsRes.data || []).map(rowToGoal);
-    if (!Array.isArray(state.goals)) state.goals = [];
-    const cloudGoalIds = new Set(cloudGoals.map(g => g.id));
-    localOnlyGoals = state.goals.filter(g => !cloudGoalIds.has(g.id));
-    state.goals = [...cloudGoals, ...localOnlyGoals];
-  } else if (goalsRes && goalsRes.error) {
-    console.info('Goals table not available — run supabase-schema-v2.sql to enable cloud sync for the Templo.');
-  }
-
-  // Push local-only items so the other side gets them too
-  if (localOnlyExp.length > 0) {
-    await supabaseClient.from('expenses').upsert(localOnlyExp.map(expenseToRow));
-  }
-  if (cloudPapas.length === 0 && state.papas.length > 0) {
-    await supabaseClient.from('papas').upsert(state.papas.map(papaToRow));
-  }
-  if (!settingsRes.data) {
-    await supabaseClient.from('app_settings').upsert(settingsRowOut());
-  }
-  if (goalsAvailable && localOnlyGoals.length > 0) {
-    try { await supabaseClient.from('goals').upsert(localOnlyGoals.map(goalToRow)); }
-    catch (e) { console.warn('push local goals', e); }
-  }
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  localStorage.setItem(BACKUP_KEY, JSON.stringify({ data: state, savedAt: Date.now() }));
-  lastSavedAt = Date.now();
-  pulseSaveIndicator();
-
-  rebuildPapaUI();
-  renderColony(); renderDeudas();
-  rebuildConceptHints();
-  if (currentView === 'world') renderWorld();
-  if (currentView === 'stats') renderStats();
-  if (currentView === 'temple') buildTempleView();
-  if (document.getElementById('historyPanel').classList.contains('show')) { buildHistoryFilters(); renderHistory(); }
-}
-
-/* === Realtime subscription === */
-function setupRealtime(household) {
-  if (realtimeChannel && supabaseClient) supabaseClient.removeChannel(realtimeChannel);
-  realtimeChannel = supabaseClient
-    .channel('thrungs:' + household)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses',     filter: `household_id=eq.${household}` }, onRemoteExpense)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'papas',        filter: `household_id=eq.${household}` }, onRemotePapa)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings', filter: `household_id=eq.${household}` }, onRemoteSettings)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'goals',        filter: `household_id=eq.${household}` }, onRemoteGoal)
-    .subscribe();
-}
-function onRemoteGoal(payload) {
-  const { eventType, new: row, old: oldRow } = payload;
-  const id = (row?.id) || (oldRow?.id);
-  if (!id) return;
-  const echoKey = 'g:' + eventType + ':' + id;
-  if (ignoreEcho.has(echoKey)) { ignoreEcho.delete(echoKey); return; }
-  if (!Array.isArray(state.goals)) state.goals = [];
-  if (eventType === 'DELETE') {
-    state.goals = state.goals.filter(g => g.id !== id);
-  } else {
-    const incoming = rowToGoal(row);
-    const idx = state.goals.findIndex(g => g.id === id);
-    if (idx >= 0) state.goals[idx] = incoming;
-    else state.goals.push(incoming);
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  if (currentView === 'temple') buildTempleView();
-  flashCloud();
-}
-function onRemoteExpense(payload) {
-  const { eventType, new: row, old: oldRow } = payload;
-  const id = (row?.id) || (oldRow?.id);
-  if (!id) return;
-  const echoKey = 'e:' + eventType + ':' + id;
-  if (ignoreEcho.has(echoKey)) { ignoreEcho.delete(echoKey); return; }
-  let incomingSettlement = null;
-  if (eventType === 'DELETE') {
-    state.expenses = state.expenses.filter(e => e.id !== id);
-  } else {
-    const incoming = rowToExpense(row);
-    const idx = state.expenses.findIndex(e => e.id === id);
-    if (idx >= 0) state.expenses[idx] = incoming;
-    else state.expenses.push(incoming);
-    if (incoming.type === 'settlement' && eventType === 'INSERT') incomingSettlement = incoming;
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  rebuildConceptHints();
-  refreshAfterRemote();
-  flashCloud();
-  // If the partner just registered a settlement, play the ritual locally too
-  if (incomingSettlement) {
-    playSettleRitual({
-      fromTutor: incomingSettlement.fromTutor,
-      toTutor:   incomingSettlement.toTutor,
-      amount:    incomingSettlement.amount
-    });
-  }
-}
-function onRemotePapa(payload) {
-  const { eventType, new: row, old: oldRow } = payload;
-  const id = (row?.id) || (oldRow?.id);
-  if (!id) return;
-  const echoKey = 'p:' + eventType + ':' + id;
-  if (ignoreEcho.has(echoKey)) { ignoreEcho.delete(echoKey); return; }
-  if (eventType === 'DELETE') state.papas = state.papas.filter(p => p.id !== id);
-  else {
-    const incoming = rowToPapa(row);
-    const idx = state.papas.findIndex(p => p.id === id);
-    if (idx >= 0) state.papas[idx] = incoming;
-    else state.papas.push(incoming);
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  rebuildPapaUI();
-  refreshAfterRemote();
-  flashCloud();
-}
-function onRemoteSettings(payload) {
-  if (payload.eventType === 'DELETE') return;
-  if (ignoreEcho.has('s')) { ignoreEcho.delete('s'); return; }
-  state.settings = Object.assign({}, state.settings, settingsRowIn(payload.new));
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  if (currentView === 'settings') populateSettings();
-  if (audio) setMasterVolume(state.settings.masterVolume);
-  renderDeudas();
-  flashCloud();
-}
-function refreshAfterRemote() {
-  if (currentView === 'colony') { renderColony(); renderDeudas(); }
-  else if (currentView === 'world') renderWorld();
-  else if (currentView === 'stats') renderStats();
-  if (document.getElementById('historyPanel').classList.contains('show')) renderHistory();
-}
-
-/* === Push helpers (called from mutation points) === */
-async function cloudPushExpense(expense) {
-  if (!cloudConnected || !supabaseClient) return;
-  ignoreEcho.add('e:INSERT:' + expense.id);
-  ignoreEcho.add('e:UPDATE:' + expense.id);
-  try { await supabaseClient.from('expenses').upsert(expenseToRow(expense)); }
-  catch (e) { console.warn('cloudPushExpense', e); }
-}
-async function cloudDeleteExpense(expenseId) {
-  if (!cloudConnected || !supabaseClient) return;
-  ignoreEcho.add('e:DELETE:' + expenseId);
-  const { household } = getCloudCreds();
-  try { await supabaseClient.from('expenses').delete().eq('household_id', household).eq('id', expenseId); }
-  catch (e) { console.warn('cloudDeleteExpense', e); }
-}
-async function cloudDeleteExpensesByIds(ids) {
-  if (!cloudConnected || !supabaseClient || ids.length === 0) return;
-  ids.forEach(id => ignoreEcho.add('e:DELETE:' + id));
-  const { household } = getCloudCreds();
-  try { await supabaseClient.from('expenses').delete().eq('household_id', household).in('id', ids); }
-  catch (e) { console.warn('cloudDeleteExpensesByIds', e); }
-}
-async function cloudPushAllPapas() {
-  if (!cloudConnected || !supabaseClient) return;
-  state.papas.forEach(p => { ignoreEcho.add('p:INSERT:' + p.id); ignoreEcho.add('p:UPDATE:' + p.id); });
-  try { await supabaseClient.from('papas').upsert(state.papas.map(papaToRow)); }
-  catch (e) { console.warn('cloudPushAllPapas', e); }
-}
-async function cloudDeletePapa(papaId) {
-  if (!cloudConnected || !supabaseClient) return;
-  ignoreEcho.add('p:DELETE:' + papaId);
-  const { household } = getCloudCreds();
-  try { await supabaseClient.from('papas').delete().eq('household_id', household).eq('id', papaId); }
-  catch (e) { console.warn('cloudDeletePapa', e); }
-}
-async function cloudPushSettings() {
-  if (!cloudConnected || !supabaseClient) return;
-  ignoreEcho.add('s');
-  try { await supabaseClient.from('app_settings').upsert(settingsRowOut()); }
-  catch (e) { console.warn('cloudPushSettings', e); }
-}
-async function cloudPushGoal(goal) {
-  if (!cloudConnected || !supabaseClient || !goal) return;
-  ignoreEcho.add('g:INSERT:' + goal.id);
-  ignoreEcho.add('g:UPDATE:' + goal.id);
-  try { await supabaseClient.from('goals').upsert(goalToRow(goal)); }
-  catch (e) { console.warn('cloudPushGoal', e); }
-}
-async function cloudDeleteGoal(goalId) {
-  if (!cloudConnected || !supabaseClient || !goalId) return;
-  ignoreEcho.add('g:DELETE:' + goalId);
-  const { household } = getCloudCreds();
-  try { await supabaseClient.from('goals').delete().eq('household_id', household).eq('id', goalId); }
-  catch (e) { console.warn('cloudDeleteGoal', e); }
-}
-async function cloudPushAllGoals() {
-  if (!cloudConnected || !supabaseClient) return;
-  const goals = getGoals();
-  if (goals.length === 0) return;
-  goals.forEach(g => { ignoreEcho.add('g:INSERT:' + g.id); ignoreEcho.add('g:UPDATE:' + g.id); });
-  try { await supabaseClient.from('goals').upsert(goals.map(goalToRow)); }
-  catch (e) { console.warn('cloudPushAllGoals', e); }
-}
-
-/* === Invitation URL === */
-function buildInvitationUrl() {
-  const { url, key, household } = getCloudCreds();
-  if (!url || !key || !household) return '';
-  const base = window.location.origin + window.location.pathname;
-  const p = new URLSearchParams({ sb_url: url, sb_key: key, h: household });
-  return base + '?' + p.toString();
-}
-async function copyInvitationUrl() {
-  const link = buildInvitationUrl();
-  if (!link) return;
-  try {
-    await navigator.clipboard.writeText(link);
-    chime();
-    speak('KRII!', t('speak.url_copied'), '');
-  } catch {
-    prompt(t('speak.url_copied'), link);
-  }
-}
-
+function cloudPushExpense() {}
+function cloudDeleteExpense() {}
+function cloudDeleteExpensesByIds() {}
+function cloudPushAllPapas() {}
+function cloudDeletePapa() {}
+function cloudPushSettings() {}
+function cloudPushGoal() {}
+function cloudDeleteGoal() {}
+function cloudPushAllGoals() {}
+function connectCloud() { return Promise.resolve(false); }
+function disconnectCloud() {}
+function updateCloudUI() {}
+function flashCloud() {}
+function bindCloudEvents() {}
 function consumeUrlParams() {
+  // Legacy cloud invitation params still get stripped from URL for cleanliness.
   const params = new URLSearchParams(window.location.search);
-  const url = params.get('sb_url');
-  const key = params.get('sb_key');
-  const household = params.get('h');
-  if (url || key || household) {
-    setCloudCreds({
-      url: url || undefined,
-      key: key || undefined,
-      household: household || undefined
-    });
+  if (params.has('sb_url') || params.has('sb_key') || params.has('h')) {
     window.history.replaceState({}, '', window.location.pathname);
-    return true;
   }
   return false;
 }
-
-/* ============================================
-   23. CLOUD UI BINDINGS
-   ============================================ */
-function bindCloudEvents() {
-  document.getElementById('connectBtn').addEventListener('click', async () => {
-    const url = document.getElementById('cloudUrl').value.trim();
-    const key = document.getElementById('cloudKey').value.trim();
-    if (!url || !key) { alert(t('alert.connect_missing')); return; }
-    setCloudCreds({ url, key });
-    const ok = await connectCloud({ url, key });
-    if (ok) { chime(); speak('KRII-MOK!', t('speak.cloud_connected'), ''); }
-  });
-  document.getElementById('disconnectBtn').addEventListener('click', () => {
-    if (confirm(t('confirm.disconnect_cloud'))) disconnectCloud();
-  });
-  document.getElementById('inviteBtn').addEventListener('click', copyInvitationUrl);
-}
-
 /* ============================================
    25. INIT
    ============================================ */
 function init() {
   bindEvents();
-  bindCloudEvents();
-
-  // Si nos abren con ?sb_url=...&sb_key=...&h=..., guardamos las credenciales
-  const camePresetFromURL = consumeUrlParams();
+  // Strip any legacy ?sb_url=... invitation params from the URL bar
+  consumeUrlParams();
 
   applyTranslations();
 
@@ -3924,18 +4090,8 @@ function init() {
     try { const wrap = JSON.parse(localStorage.getItem(BACKUP_KEY)); if (wrap?.savedAt) lastSavedAt = wrap.savedAt; } catch(e) {}
   }
   updateSaveLabel();
-  updateCloudUI('disconnected');
   initBackgroundMusic();
-
-  // Auto-connect si hay credenciales guardadas (o vinieron por URL)
-  const creds = getCloudCreds();
-  if (creds.url && creds.key) {
-    connectCloud().then(ok => {
-      if (ok && camePresetFromURL) {
-        speak('KRII-MOK!', t('speak.cloud_connected'), '');
-      }
-    }).catch(e => console.warn('auto-connect', e));
-  }
+  setMusicStatus('idle');
 }
 init();
 
