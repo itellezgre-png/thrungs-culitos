@@ -99,12 +99,13 @@
           <input type="date" id="expenseDate">
           <span class="feed-label" data-i18n="feed.split">REPARTO</span>
           <select id="splitSelect">
-            <option value="50/50" data-i18n="feed.split.5050">50 / 50</option>
-            <option value="100isi" data-i18n="feed.split.100isi">100% ISI</option>
-            <option value="100gayle" data-i18n="feed.split.100gayle">100% GAYLE</option>
+            <option value="50/50" data-i18n="split.half">A MEDIAS</option>
+            <option value="owed_full" data-i18n="split.owed_full">ME LO DEBE ENTERO</option>
+            <option value="absorb" data-i18n="split.absorb">LO ASUMO YO (sin deuda)</option>
           </select>
           <button id="feedBtn" data-i18n="feed.feed">ALIMENTAR</button>
         </div>
+        <div class="split-explain" id="feedSplitExplain">—</div>
       </div>
     </section>
 
@@ -299,6 +300,12 @@
           <div class="setting-row"><span class="setting-label" data-i18n="settings.music_vol">VOL. MÚSICA</span><input type="range" id="musicVolume" min="0" max="100" value="40"><span class="setting-suffix"><span id="musicVolLabel">40</span>%</span></div>
         </div>
 
+        <div class="settings-group review-highlight">
+          <h3 data-i18n="review.title">🔍 REVISAR REPARTOS AL 100%</h3>
+          <p class="hint-text" data-i18n="review.hint">Estos gastos tienen reparto del 100% (no van a medias). Revisa que cada uno haga lo que esperas.</p>
+          <div class="review-list" id="reviewList"></div>
+        </div>
+
         <div class="settings-group backup-highlight">
           <h3 data-i18n="backup.auto_title">🛡 AUTO-BACKUP (recomendado)</h3>
           <p class="hint-text" data-i18n="backup.auto_hint">Elige una carpeta del disco una sola vez. Cada cambio se guarda ahí en silencio + 7 snapshots diarios rotativos.</p>
@@ -380,10 +387,11 @@
       </div>
       <label class="modal-label" data-i18n="modal.split">Reparto</label>
       <select id="editSplit">
-        <option value="50/50" data-i18n="feed.split.5050">50 / 50</option>
-        <option value="100isi" data-i18n="feed.split.100isi">100% ISI</option>
-        <option value="100gayle" data-i18n="feed.split.100gayle">100% GAYLE</option>
+        <option value="50/50" data-i18n="split.half">A MEDIAS</option>
+        <option value="owed_full" data-i18n="split.owed_full">ME LO DEBE ENTERO</option>
+        <option value="absorb" data-i18n="split.absorb">LO ASUMO YO (sin deuda)</option>
       </select>
+      <div class="split-explain" id="editSplitExplain">—</div>
     </div>
     <div class="modal-footer">
       <button class="modal-btn cancel" id="editCancel" data-i18n="modal.cancel">CANCELAR</button>

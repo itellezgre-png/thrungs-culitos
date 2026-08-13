@@ -152,6 +152,22 @@ const LOCALES = {
     'feed.sheet_title': 'NUEVO GASTO',
     'feed.concept_placeholder': 'concepto (cena indio, netflix...)',
     'feed.split.5050': '50 / 50', 'feed.split.100isi': '100% ISI', 'feed.split.100gayle': '100% GAYLE',
+    'split.half': 'A MEDIAS',
+    'split.owed_full': 'ME LO DEBE ENTERO',
+    'split.absorb': 'LO ASUMO YO (sin deuda)',
+    'split.no_debt': 'SIN DEUDA',
+    'split.g_owes_all': 'G DEBE 100%',
+    'split.i_owes_all': 'I DEBE 100%',
+    'split.explain_half': '{payer} pagó · {other} le debe la mitad',
+    'split.explain_owed': '{payer} pagó · {other} le debe TODO',
+    'split.explain_absorb': '{payer} pagó y lo asume · no genera deuda',
+    'review.title': '🔍 REVISAR REPARTOS AL 100%',
+    'review.hint': 'Estos gastos tienen reparto del 100% (no van a medias). Antes de v2.2 la etiqueta era ambigua, así que revisa que cada uno haga lo que esperas. Toca un gastito para cambiarlo.',
+    'review.none': 'No hay gastos con reparto al 100%. Todo va a medias. ✓',
+    'review.effect_no_debt': 'no genera deuda',
+    'review.effect_owes': '{debtor} debe {amount} €',
+    'review.flip': '⇄ CAMBIAR',
+    'review.paid_by': 'pagó {tutor}',
     'world.title_prefix': 'MUNDO · ', 'world.today': 'HOY', 'world.history': '📜 HISTÓRICO',
     'world.empty': 'esta luna aún no ha visto Thronglets',
     'world.empty_hint': 've a la COLONIA y aliméntalos',
@@ -382,6 +398,22 @@ const LOCALES = {
     'feed.sheet_title': 'NEW EXPENSE',
     'feed.concept_placeholder': 'description (taco tuesday, netflix...)',
     'feed.split.5050': '50 / 50', 'feed.split.100isi': '100% ISI', 'feed.split.100gayle': '100% GAYLE',
+    'split.half': 'SPLIT IN HALF',
+    'split.owed_full': 'THEY OWE ME ALL',
+    'split.absorb': 'I ABSORB IT (no debt)',
+    'split.no_debt': 'NO DEBT',
+    'split.g_owes_all': 'G OWES 100%',
+    'split.i_owes_all': 'I OWES 100%',
+    'split.explain_half': '{payer} paid · {other} owes half',
+    'split.explain_owed': '{payer} paid · {other} owes ALL of it',
+    'split.explain_absorb': '{payer} paid and absorbs it · no debt',
+    'review.title': '🔍 REVIEW 100% SPLITS',
+    'review.hint': 'These expenses have a 100% split (not halved). Before v2.2 the label was ambiguous, so check each one does what you expect. Tap an expense to change it.',
+    'review.none': 'No expenses with a 100% split. Everything is halved. ✓',
+    'review.effect_no_debt': 'generates no debt',
+    'review.effect_owes': '{debtor} owes {amount} €',
+    'review.flip': '⇄ FLIP',
+    'review.paid_by': 'paid by {tutor}',
     'world.title_prefix': 'WORLD · ', 'world.today': 'TODAY', 'world.history': '📜 HISTORY',
     'world.empty': "this moon hasn't seen Thronglets yet",
     'world.empty_hint': 'go to COLONY and feed them',
@@ -1008,22 +1040,68 @@ function isRecurringInstance(expense, viewKey) {
   return expense.papaId === 'suscri' && monthKey(new Date(expense.timestamp)) !== viewKey;
 }
 function fmt(n) { return n.toFixed(2).replace('.', ','); }
-function splitObj(splitKey) {
-  if (splitKey === '100isi')   return { isi: 1.0, gayle: 0.0 };
-  if (splitKey === '100gayle') return { isi: 0.0, gayle: 1.0 };
-  return { isi: 0.5, gayle: 0.5 };
+/* ─── SPLIT MODEL ───────────────────────────────
+   Internally `split` = { isi, gayle } fractions of who BEARS the cost.
+   Debt = paid − borne. The UI, however, is payer-relative, because
+   "100% ISI" is ambiguous: it produces opposite debt directions
+   depending on who paid. The payer-relative keys are:
+
+     '50/50'      → half each
+     'owed_full'  → the OTHER tutor bears it all → payer is owed 100%
+     'absorb'     → the PAYER bears it all       → generates no debt
+
+   Legacy keys '100isi' / '100gayle' are still accepted on the way in
+   so old data and old links keep working.
+   ─────────────────────────────────────────────── */
+function splitObj(key, payer) {
+  const payerIsIsi = (payer || 'Isi') === 'Isi';
+  switch (key) {
+    case 'owed_full':
+      // Other tutor bears the whole thing
+      return payerIsIsi ? { isi: 0.0, gayle: 1.0 } : { isi: 1.0, gayle: 0.0 };
+    case 'absorb':
+      // Payer bears the whole thing → nets to zero
+      return payerIsIsi ? { isi: 1.0, gayle: 0.0 } : { isi: 0.0, gayle: 1.0 };
+    // Legacy absolute keys
+    case '100isi':   return { isi: 1.0, gayle: 0.0 };
+    case '100gayle': return { isi: 0.0, gayle: 1.0 };
+    default:         return { isi: 0.5, gayle: 0.5 };
+  }
 }
-function splitLabel(s) {
+/* Reverse: split object + payer → payer-relative select key */
+function splitKey(s, payer) {
   if (!s) return '50/50';
-  if (s.isi === 1.0) return '100% I';
-  if (s.gayle === 1.0) return '100% G';
+  const payerIsIsi = (payer || 'Isi') === 'Isi';
+  if (s.isi === 1.0) return payerIsIsi ? 'absorb' : 'owed_full';
+  if (s.gayle === 1.0) return payerIsIsi ? 'owed_full' : 'absorb';
   return '50/50';
 }
-function splitKey(s) {
+/* Display label for history rows / speech. Shows the actual debt
+   outcome, which needs both the split AND who paid. */
+function splitLabel(s, payer) {
   if (!s) return '50/50';
-  if (s.isi === 1.0) return '100isi';
-  if (s.gayle === 1.0) return '100gayle';
-  return '50/50';
+  if (s.isi !== 1.0 && s.gayle !== 1.0) return '50/50';
+  const payerIsIsi = (payer || 'Isi') === 'Isi';
+  const payerBearsAll = payerIsIsi ? (s.isi === 1.0) : (s.gayle === 1.0);
+  if (payerBearsAll) return t('split.no_debt');
+  return payerIsIsi ? t('split.g_owes_all') : t('split.i_owes_all');
+}
+/* Plain-language sentence of what the current form selection will do */
+function splitExplain(key, payer) {
+  const p = payer || 'Isi';
+  const other = p === 'Isi' ? 'Gayle' : 'Isi';
+  if (key === 'owed_full') return t('split.explain_owed',   { payer: p, other });
+  if (key === 'absorb')    return t('split.explain_absorb', { payer: p, other });
+  return t('split.explain_half', { payer: p, other });
+}
+function refreshSplitExplain() {
+  const feedEl = document.getElementById('feedSplitExplain');
+  if (feedEl) feedEl.textContent = splitExplain(selectedSplit, selectedTutor);
+  const editEl = document.getElementById('editSplitExplain');
+  if (editEl && !document.getElementById('editModal').hidden) {
+    const sel = document.getElementById('editSplit');
+    editEl.textContent = splitExplain(sel ? sel.value : '50/50', editTutor);
+  }
 }
 
 
@@ -1487,10 +1565,12 @@ function selectPapaUI(id) {
 function selectTutorUI(name) {
   selectedTutor = name;
   document.querySelectorAll('.tutor-btn[data-tutor]').forEach(b => b.classList.toggle('active', b.dataset.tutor === name));
+  refreshSplitExplain();
 }
 function selectSplitUI(key) {
   selectedSplit = key;
   document.getElementById('splitSelect').value = key;
+  refreshSplitExplain();
 }
 
 /* ============================================
@@ -1526,7 +1606,7 @@ function feed() {
   const papa = getPapaById(selectedPapa);
   const wasSick = papaSpentBefore > (papa?.budget ?? 999999);
 
-  const split = splitObj(selectedSplit);
+  const split = splitObj(selectedSplit, selectedTutor);
   const expense = {
     id: 'e' + Date.now() + Math.random().toString(36).slice(2,6),
     papaId: selectedPapa, name: concepto, amount,
@@ -1850,7 +1930,7 @@ function tellStory(expense, el) {
   const sick = expense.bornSick ? ' ' + t('sticker.sick') : '';
   const recurringNote = isRecurringInstance(expense, worldMonthKey)
     ? t('speak.recurring_since', { month: monthLabel(monthKey(new Date(expense.timestamp))) }) : '';
-  const sp = splitLabel(expense.split);
+  const sp = splitLabel(expense.split, expense.tutor);
   speak(
     randGreeting() + ' ' + randGreeting(),
     t('speak.story_concept', { name: expense.name, papa: papa?.name || '???', sick }),
@@ -2241,6 +2321,114 @@ function buildUniverseMapSVG() {
           <path d="M 88 205 q 4 -4 8 0 q 4 -4 8 0" fill="none" stroke="#fff66d" stroke-width="1.1" opacity="0.7">
             <animate attributeName="d" values="M 88 205 q 4 -4 8 0 q 4 -4 8 0; M 88 205 q 4 -1 8 0 q 4 -1 8 0; M 88 205 q 4 -4 8 0 q 4 -4 8 0" dur="0.75s" begin="0.05s" repeatCount="indefinite"/>
           </path>
+        </g>
+      </g>
+
+      <!-- Aurora borealis above the mountains -->
+      <g class="aurora" opacity="0.5">
+        <path d="M 0 60 Q 300 20 600 70 T 1200 50 T 1800 80 T 2000 60 L 2000 190 Q 1700 150 1400 185 T 800 165 T 200 195 T 0 175 Z"
+              fill="#7df9aa" opacity="0.22">
+          <animate attributeName="opacity" values="0.10;0.30;0.10" dur="9s" repeatCount="indefinite"/>
+        </path>
+        <path d="M 0 95 Q 400 55 800 105 T 1600 85 T 2000 110 L 2000 215 Q 1600 180 1200 210 T 400 195 T 0 220 Z"
+              fill="#c89cff" opacity="0.18">
+          <animate attributeName="opacity" values="0.06;0.26;0.06" dur="13s" repeatCount="indefinite" begin="2s"/>
+        </path>
+        <path d="M 0 130 Q 500 100 1000 145 T 2000 130 L 2000 200 Q 1500 175 1000 200 T 0 195 Z"
+              fill="#66ddff" opacity="0.14">
+          <animate attributeName="opacity" values="0.04;0.20;0.04" dur="11s" repeatCount="indefinite" begin="4.5s"/>
+        </path>
+      </g>
+
+      <!-- Stone path connecting bridge → village → temple -->
+      <g class="stone-path" opacity="0.55">
+        <path d="M 950 900 Q 1150 880 1250 850 T 1400 810" fill="none" stroke="#8a8a9a" stroke-width="12" stroke-linecap="round"/>
+        <path d="M 950 900 Q 1150 880 1250 850 T 1400 810" fill="none" stroke="#b8b8c8" stroke-width="7"
+              stroke-dasharray="6 9" stroke-linecap="round"/>
+      </g>
+
+      <!-- Campfire in the village plaza -->
+      <g class="campfire" transform="translate(1180, 930)">
+        <!-- stone ring -->
+        <ellipse cx="0" cy="6" rx="17" ry="6" fill="#5a5a68" stroke="#1a0033" stroke-width="1"/>
+        <ellipse cx="0" cy="5" rx="12" ry="4" fill="#2a2a34"/>
+        <!-- logs -->
+        <rect x="-11" y="0" width="22" height="4" fill="#5a3018" transform="rotate(14)"/>
+        <rect x="-11" y="0" width="22" height="4" fill="#4a2810" transform="rotate(-20)"/>
+        <!-- flames -->
+        <path d="M 0 2 Q -7 -8 -3 -16 Q 0 -10 0 -18 Q 3 -10 4 -16 Q 8 -8 0 2 Z" fill="#ff8866">
+          <animate attributeName="d"
+            values="M 0 2 Q -7 -8 -3 -16 Q 0 -10 0 -18 Q 3 -10 4 -16 Q 8 -8 0 2 Z;
+                    M 0 2 Q -8 -9 -2 -20 Q 0 -12 1 -22 Q 4 -12 5 -18 Q 9 -8 0 2 Z;
+                    M 0 2 Q -7 -8 -3 -16 Q 0 -10 0 -18 Q 3 -10 4 -16 Q 8 -8 0 2 Z"
+            dur="0.55s" repeatCount="indefinite"/>
+        </path>
+        <path d="M 0 2 Q -4 -6 -1 -12 Q 0 -7 1 -13 Q 4 -6 0 2 Z" fill="#fff66d">
+          <animate attributeName="d"
+            values="M 0 2 Q -4 -6 -1 -12 Q 0 -7 1 -13 Q 4 -6 0 2 Z;
+                    M 0 2 Q -5 -7 0 -15 Q 1 -8 2 -14 Q 5 -6 0 2 Z;
+                    M 0 2 Q -4 -6 -1 -12 Q 0 -7 1 -13 Q 4 -6 0 2 Z"
+            dur="0.4s" repeatCount="indefinite"/>
+        </path>
+        <!-- sparks -->
+        <circle cx="0" cy="-18" r="1.4" fill="#fff66d">
+          <animate attributeName="cy" values="-18;-46" dur="1.5s" repeatCount="indefinite"/>
+          <animate attributeName="cx" values="0;7" dur="1.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0" dur="1.5s" repeatCount="indefinite"/>
+        </circle>
+        <circle cx="0" cy="-18" r="1.2" fill="#ff8866">
+          <animate attributeName="cy" values="-18;-42" dur="1.8s" begin="0.6s" repeatCount="indefinite"/>
+          <animate attributeName="cx" values="0;-6" dur="1.8s" begin="0.6s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="1;0" dur="1.8s" begin="0.6s" repeatCount="indefinite"/>
+        </circle>
+        <!-- warm ground glow -->
+        <ellipse cx="0" cy="8" rx="40" ry="13" fill="#ff8866" opacity="0.13">
+          <animate attributeName="opacity" values="0.08;0.20;0.08" dur="1.1s" repeatCount="indefinite"/>
+        </ellipse>
+      </g>
+
+      <!-- Clock tower — hands set to the real current time -->
+      <g class="clock-tower" transform="translate(1290, 1000)">
+        <rect x="-16" y="0" width="32" height="120" fill="#a89890" stroke="#1a0033" stroke-width="1.5"/>
+        <rect x="-16" y="0" width="32" height="8" fill="#7a6a62"/>
+        <polygon points="-22,0 0,-30 22,0" fill="#5a2088" stroke="#1a0033" stroke-width="1.5"/>
+        <rect x="-5" y="88" width="10" height="32" fill="#4a2810" stroke="#1a0033" stroke-width="1"/>
+        <!-- clock face -->
+        <circle cx="0" cy="34" r="13" fill="#fff9d0" stroke="#1a0033" stroke-width="1.5"/>
+        <circle cx="0" cy="22.5" r="0.9" fill="#1a0033"/>
+        <circle cx="0" cy="45.5" r="0.9" fill="#1a0033"/>
+        <circle cx="-11.5" cy="34" r="0.9" fill="#1a0033"/>
+        <circle cx="11.5" cy="34" r="0.9" fill="#1a0033"/>
+        <!-- hour hand -->
+        <line x1="0" y1="34" x2="0" y2="27" stroke="#1a0033" stroke-width="2" stroke-linecap="round"
+              transform="rotate(${(((new Date()).getHours() % 12) * 30 + (new Date()).getMinutes() * 0.5).toFixed(1)} 0 34)"/>
+        <!-- minute hand, creeps forward in real time -->
+        <line x1="0" y1="34" x2="0" y2="24" stroke="#1a0033" stroke-width="1.3" stroke-linecap="round"
+              transform="rotate(${((new Date()).getMinutes() * 6).toFixed(1)} 0 34)">
+          <animateTransform attributeName="transform" type="rotate" additive="sum"
+            from="0 0 34" to="360 0 34" dur="3600s" repeatCount="indefinite"/>
+        </line>
+        <circle cx="0" cy="34" r="1.6" fill="#1a0033"/>
+        <!-- bell glow -->
+        <circle cx="0" cy="-12" r="3.5" fill="#fff66d" opacity="0.85">
+          <animate attributeName="opacity" values="0.5;1;0.5" dur="3s" repeatCount="indefinite"/>
+        </circle>
+      </g>
+
+      <!-- Moored rowboats on the riverbank -->
+      <g class="rowboats">
+        <g transform="translate(320, 648)">
+          <path d="M 0 0 L 34 0 L 29 9 L 5 9 Z" fill="#8a6038" stroke="#1a0033" stroke-width="1.2"/>
+          <line x1="6" y1="2" x2="28" y2="2" stroke="#5a3018" stroke-width="1"/>
+          <line x1="24" y1="1" x2="40" y2="-6" stroke="#5a3018" stroke-width="1.5"/>
+          <animateTransform attributeName="transform" type="translate" additive="sum"
+            values="0,0; 0,2.5; 0,0" dur="3.4s" repeatCount="indefinite"/>
+        </g>
+        <g transform="translate(1520, 636)">
+          <path d="M 0 0 L 30 0 L 26 8 L 4 8 Z" fill="#7a5028" stroke="#1a0033" stroke-width="1.2"/>
+          <line x1="5" y1="2" x2="25" y2="2" stroke="#4a2810" stroke-width="1"/>
+          <animateTransform attributeName="transform" type="translate" additive="sum"
+            values="0,0; 0,-2.5; 0,0" dur="4.1s" repeatCount="indefinite" begin="1.2s"/>
         </g>
       </g>
 
@@ -2755,7 +2943,7 @@ function renderHistory() {
       <span class="h-date">${dStr}</span>
       <span class="h-name" title="${e.name} · ${papa?.name || '?'}">${e.name}${e.bornSick ? ' ⚠' : ''}</span>
       <span class="h-recur">${recurring ? '♺' : ''}</span>
-      <span class="h-split">${splitLabel(e.split)}</span>
+      <span class="h-split">${splitLabel(e.split, e.tutor)}</span>
       <span class="h-tutor ${e.tutor.toLowerCase()}">${e.tutor === 'Isi' ? t('tutor.short.isi') : t('tutor.short.gayle')}</span>
       <span class="h-amount">${fmt(e.amount)} €</span>
       <button class="h-edit" title="Editar">✎</button>
@@ -2912,11 +3100,12 @@ function openEditModal(expenseId) {
   document.getElementById('editConcepto').value = e.name;
   document.getElementById('editAmount').value = e.amount;
   document.getElementById('editDate').value = ymd(new Date(e.timestamp));
-  document.getElementById('editSplit').value = splitKey(e.split);
+  document.getElementById('editSplit').value = splitKey(e.split, e.tutor);
   buildEditPapaSelector();
   document.querySelectorAll('#editPapaSelector .papa-btn').forEach(b => b.classList.toggle('active', b.dataset.editPapa === e.papaId));
   document.querySelectorAll('#editTutorSelector .tutor-btn').forEach(b => b.classList.toggle('active', b.dataset.editTutor === e.tutor));
   document.getElementById('editModal').hidden = false;
+  refreshSplitExplain();
   setTimeout(() => document.getElementById('editConcepto').focus(), 50);
   beep(900);
 }
@@ -2931,7 +3120,7 @@ function saveEdit() {
   e.name = name; e.amount = amount;
   e.papaId = editPapa || e.papaId;
   e.tutor  = editTutor || e.tutor;
-  e.split  = splitObj(document.getElementById('editSplit').value);
+  e.split  = splitObj(document.getElementById('editSplit').value, e.tutor);
   const dateStr = document.getElementById('editDate').value;
   if (dateStr) {
     const [y, m, d] = dateStr.split('-').map(Number);
@@ -3548,8 +3737,74 @@ function saveSettlement() {
 /* ============================================
    17. SETTINGS
    ============================================ */
+/* ─── 100% SPLIT REVIEW TOOL ──────────────────
+   Lists every expense whose split is 100% (either direction) across
+   all months, showing the resulting debt in plain language, with a
+   one-click flip. Nothing mutates until the user clicks. */
+function buildReviewList() {
+  const wrap = document.getElementById('reviewList');
+  if (!wrap) return;
+  const flagged = state.expenses
+    .filter(e => e.type !== 'settlement')
+    .filter(e => e.split && (e.split.isi === 1.0 || e.split.gayle === 1.0))
+    .sort((a, b) => b.timestamp - a.timestamp);
+
+  if (flagged.length === 0) {
+    wrap.innerHTML = `<div class="review-empty">${t('review.none')}</div>`;
+    return;
+  }
+
+  wrap.innerHTML = flagged.map(e => {
+    const papa = getPapaById(e.papaId);
+    const d = new Date(e.timestamp);
+    const dStr = String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+    const payerIsIsi = e.tutor === 'Isi';
+    const payerBearsAll = payerIsIsi ? (e.split.isi === 1.0) : (e.split.gayle === 1.0);
+    const effect = payerBearsAll
+      ? t('review.effect_no_debt')
+      : t('review.effect_owes', {
+          debtor: payerIsIsi ? 'Gayle' : 'Isi',
+          amount: fmt(e.amount)
+        });
+    return `
+      <div class="review-row ${papa?.cls || ''} ${payerBearsAll ? 'no-debt' : 'has-debt'}" data-review-id="${e.id}">
+        <div class="rv-main">
+          <span class="rv-name">${e.name}</span>
+          <span class="rv-amount">${fmt(e.amount)} €</span>
+        </div>
+        <div class="rv-meta">
+          <span class="rv-date">${dStr}</span>
+          <span class="rv-tutor ${e.tutor.toLowerCase()}">${t('review.paid_by', { tutor: e.tutor })}</span>
+        </div>
+        <div class="rv-effect">→ ${effect}</div>
+        <button class="rv-flip" type="button" data-flip-id="${e.id}">${t('review.flip')}</button>
+      </div>`;
+  }).join('');
+
+  wrap.querySelectorAll('[data-flip-id]').forEach(btn => {
+    btn.addEventListener('click', () => flipExpenseSplit(btn.dataset.flipId));
+  });
+}
+
+function flipExpenseSplit(expenseId) {
+  const e = state.expenses.find(x => x.id === expenseId);
+  if (!e || !e.split) return;
+  // Flip which tutor bears the full cost
+  if (e.split.isi === 1.0)        e.split = { isi: 0.0, gayle: 1.0 };
+  else if (e.split.gayle === 1.0) e.split = { isi: 1.0, gayle: 0.0 };
+  else return;
+  save();
+  beep(1100);
+  buildReviewList();
+  renderColony(); renderDeudas();
+  if (currentView === 'stats') renderStats();
+  const hp = document.getElementById('historyPanel');
+  if (hp && hp.classList.contains('show')) renderHistory();
+}
+
 function populateSettings() {
   buildPapasList();
+  buildReviewList();
   document.querySelectorAll('input[name="splitModel"]').forEach(r => r.checked = (r.value === state.settings.splitModel));
   document.getElementById('masterVolume').value  = Math.round((state.settings.masterVolume || 0.6) * 100);
   document.getElementById('volLabel').textContent = Math.round((state.settings.masterVolume || 0.6) * 100);
@@ -4246,7 +4501,7 @@ function renderQuickChips() {
       if (info.lastPapa && getPapaById(info.lastPapa)) selectPapaUI(info.lastPapa);
       if (info.lastTutor) selectTutorUI(info.lastTutor);
       if (info.lastSplit) {
-        const key = splitKey(info.lastSplit);
+        const key = splitKey(info.lastSplit, info.lastTutor);
         const sel = document.getElementById('splitSelect');
         if (sel) { sel.value = key; selectedSplit = key; }
       }
@@ -4267,7 +4522,9 @@ function renderQuickChips() {
 function bindEvents() {
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
   document.querySelectorAll('.tutor-btn[data-tutor]').forEach(b => b.addEventListener('click', () => { selectTutorUI(b.dataset.tutor); beep(b.dataset.tutor === 'Isi' ? 1400 : 900); }));
-  document.getElementById('splitSelect').addEventListener('change', (e) => { selectedSplit = e.target.value; beep(900); });
+  document.getElementById('splitSelect').addEventListener('change', (e) => { selectedSplit = e.target.value; refreshSplitExplain(); beep(900); });
+  const editSplitEl = document.getElementById('editSplit');
+  if (editSplitEl) editSplitEl.addEventListener('change', refreshSplitExplain);
 
   document.getElementById('feedBtn').addEventListener('click', feed);
   const conceptoEl = document.getElementById('concepto');
@@ -4383,6 +4640,7 @@ function bindEvents() {
     editTutor = b.dataset.editTutor;
     document.querySelectorAll('#editTutorSelector .tutor-btn').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
+    refreshSplitExplain();
   }));
 
   // Papa modal

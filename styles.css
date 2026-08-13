@@ -2344,6 +2344,118 @@ h1 {
 }
 
 /* ============================================
+   SPLIT EXPLANATION LINE (feed + edit modal)
+   ============================================ */
+.split-explain {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #7df9aa;
+  padding: 6px 10px;
+  background: rgba(125,249,170,0.07);
+  border-left: 3px solid #7df9aa;
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================
+   100% SPLIT REVIEW TOOL (AJUSTES)
+   ============================================ */
+.review-highlight {
+  border: 2px solid #fff66d !important;
+  background: rgba(255,246,109,0.05) !important;
+}
+.review-highlight h3 { color: #fff66d; text-shadow: 0 0 8px rgba(255,246,109,0.4); }
+.review-list {
+  display: flex; flex-direction: column; gap: 8px;
+  margin-top: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.review-list::-webkit-scrollbar { width: 8px; }
+.review-list::-webkit-scrollbar-thumb { background: #c89cff; }
+.review-empty {
+  font-family: 'VT323', monospace; font-size: 16px;
+  color: #7df9aa; text-align: center; padding: 16px;
+  background: rgba(125,249,170,0.06);
+  border: 1px dashed #7df9aa;
+}
+.review-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "main   flip"
+    "meta   flip"
+    "effect flip";
+  gap: 3px 12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.04);
+  border-left: 4px solid currentColor;
+  align-items: center;
+}
+.review-row.no-debt { border-left-color: #666; }
+.review-row.has-debt { border-left-color: #fff66d; }
+.rv-main {
+  grid-area: main;
+  display: flex; justify-content: space-between; gap: 10px;
+  align-items: baseline;
+}
+.rv-name {
+  font-family: 'VT323', monospace; font-size: 17px;
+  color: #e6f7ff;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rv-amount {
+  font-family: 'VT323', monospace; font-size: 18px;
+  color: #fff66d; font-weight: bold; white-space: nowrap;
+}
+.rv-meta {
+  grid-area: meta;
+  display: flex; gap: 10px; align-items: center;
+  font-family: 'VT323', monospace; font-size: 13px;
+  color: #c89cff; opacity: 0.8;
+}
+.rv-tutor.isi   { color: #00d4ff; }
+.rv-tutor.gayle { color: #ff9933; }
+.rv-effect {
+  grid-area: effect;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #7df9aa;
+}
+.review-row.no-debt .rv-effect { color: #888; }
+.rv-flip {
+  grid-area: flip;
+  background: transparent;
+  color: #c89cff;
+  border: 1px solid #c89cff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  padding: 10px 8px;
+  cursor: pointer;
+  min-height: 44px;
+  align-self: center;
+  transition: all 0.15s;
+}
+.rv-flip:hover, .rv-flip:active {
+  background: #c89cff; color: #0a0014;
+  box-shadow: 0 0 10px #c89cff;
+}
+
+@media (max-width: 700px) {
+  .review-row {
+    grid-template-columns: 1fr;
+    grid-template-areas: "main" "meta" "effect" "flip";
+    gap: 5px;
+  }
+  .rv-flip { width: 100%; min-height: 40px; }
+  .rv-name { font-size: 15px; }
+  .rv-amount { font-size: 16px; }
+  .split-explain { font-size: 13px; }
+}
+
+/* ============================================
    AUTO-BACKUP SECTION (AJUSTES)
    ============================================ */
 .backup-highlight {

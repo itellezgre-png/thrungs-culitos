@@ -5,7 +5,7 @@
    - Funciona offline con cache de fallback
    =============================================== */
 
-const CACHE = 'thrungs-money-v2.1';
+const CACHE = 'thrungs-money-v2.2';
 const ASSETS = [
   './',
   './index.html',
